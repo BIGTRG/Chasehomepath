@@ -19,6 +19,7 @@ import Learn from './screens/Learn.jsx';
 import Marketplace from './screens/Marketplace.jsx';
 import PlanToLot from './screens/PlanToLot.jsx';
 import Agent from './screens/Agent.jsx';
+import Homeowner from './screens/Homeowner.jsx';
 
 // Operator surface
 import Roster from './screens/operator/Roster.jsx';
@@ -48,6 +49,7 @@ function MemberSurface() {
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/marketplace/plans/:planId" element={<PlanToLot />} />
           <Route path="/agent" element={<Agent />} />
+          <Route path="/home" element={<Homeowner />} />
           <Route path="/disputes" element={<Disputes />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

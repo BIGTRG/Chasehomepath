@@ -525,6 +525,44 @@ test('operator: roster scoping, client detail access, capacity, ratings, HQ admi
   assert.equal(forbidden.status, 403);
 });
 
+test('homeowner: recording a home unlocks after-modules and drives the dashboard', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+  const jsonHeaders = { ...authed(accessToken), 'content-type': 'application/json' };
+
+  // Not a homeowner yet.
+  const before = await (await fetch(`${base}/api/home`, { headers: authed(accessToken) })).json();
+  assert.equal(before.isHomeowner, false);
+
+  // "after you own it" modules are locked before homeownership.
+  const learnBefore = await (await fetch(`${base}/api/learn`, { headers: authed(accessToken) })).json();
+  assert.ok(learnBefore.groups.after.every((m) => m.status === 'locked'));
+
+  // Record the home (interest rate high enough to trigger the informational refi alert).
+  const rec = await fetch(`${base}/api/home`, {
+    method: 'POST', headers: jsonHeaders,
+    body: JSON.stringify({ address: '10 New Home Ln', purchasePrice: 200000, mortgageBalance: 190000, interestRate: 0.08, monthlyTaxes: 250, monthlyInsurance: 90 }),
+  });
+  assert.equal(rec.status, 201);
+
+  // Dashboard now reflects homeownership, a value estimate, maintenance, and a refi alert.
+  const dash = await (await fetch(`${base}/api/home`, { headers: authed(accessToken) })).json();
+  assert.equal(dash.isHomeowner, true);
+  assert.ok(dash.value.estimated >= 200000);
+  assert.ok(dash.maintenance.length >= 4);
+  assert.ok(dash.refiAlert && /specialist|team/i.test(dash.refiAlert.message));
+  assert.equal(/\d+(\.\d+)?\s*%/.test(dash.refiAlert.message), false); // no quoted rate
+
+  // The plan is completed, so "after you own it" modules are now available.
+  const learnAfter = await (await fetch(`${base}/api/learn`, { headers: authed(accessToken) })).json();
+  assert.ok(learnAfter.groups.after.some((m) => m.status === 'available'));
+
+  // Completing a maintenance task works.
+  const task = dash.maintenance[0];
+  const done = await fetch(`${base}/api/home/maintenance/${task.id}/done`, { method: 'POST', headers: authed(accessToken) });
+  assert.equal(done.status, 200);
+});
+
 test('onboarding: pipeline runs to complete and opens the onboarding gate', async (t) => {
   if (!dbUp) return t.skip('no database reachable');
   const admin = await createUserWithRole('admin');

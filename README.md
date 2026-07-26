@@ -25,7 +25,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **10 — Operator console** | Roster, client detail, team capacity, ratings dashboard, inventory review, HQ user/program admin | ✅ built |
 | **11 — Partner portal** | Certification (e-sign + license verify), assigned clients, inventory publishing, compliance profile | ✅ built |
 | **12 — Workforce onboarding** | Gated pipeline (application→…→provisioning), license/e-sign integrations, operator queue | ✅ built |
-| 13 — Homeowner mode | Post-purchase: maintenance, escrow/taxes, value tracking, refi alerts | ⏳ last |
+| **13 — Homeowner mode** | Post-purchase: maintenance, escrow/taxes, value estimate, informational refi alerts | ✅ built |
+
+**All 13 phases built.** Three surfaces (member app, operator console, partner portal) on one API and one PostgreSQL database.
 
 ## Layout
 

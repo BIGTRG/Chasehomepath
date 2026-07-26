@@ -75,6 +75,15 @@ export default function PlanHome() {
         <div className="item-meta">Questions about your plan, credit, or money? Ask anytime.</div>
       </Link>
 
+      {data.status === 'completed' && (
+        <Link to="/home" className="card item-card">
+          <div className="item-top">
+            <span className="item-creditor">Homeowner mode →</span>
+          </div>
+          <div className="item-meta">Maintenance, escrow &amp; taxes, value, and refi alerts.</div>
+        </Link>
+      )}
+
       {/* Milestones */}
       {data.milestones.length > 0 && (
         <div className="card">

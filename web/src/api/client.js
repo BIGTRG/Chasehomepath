@@ -141,6 +141,12 @@ export const agent = {
   ask: (question) => api('/agent/ask', { method: 'POST', body: { question } }),
 };
 
+export const home = {
+  dashboard: () => api('/home'),
+  record: (body) => api('/home', { method: 'POST', body }),
+  completeTask: (id) => api(`/home/maintenance/${id}/done`, { method: 'POST' }),
+};
+
 export const assistance = {
   mine: () => api('/assistance'),
 };
