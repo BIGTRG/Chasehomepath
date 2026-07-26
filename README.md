@@ -20,8 +20,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **5 — Team & comms** | Team assignment (onboarding-gated), in-app messaging, appointments, consultation→score unlock, ratings | ✅ built |
 | **6 — Education** | Curriculum, assignment-from-plan, data-driven lock/unlock, before/during/after, Learn screen | ✅ built |
 | **7 — Marketplace** | Listings (source-labeled), house-plan catalog, lot-plan fit, plan-to-lot all-in, per-member enrichment | ✅ built |
-| 8 — Ingestion | Partner-route publishing, MLS/RESO connector, normalization, dedup, quality gate | ⏳ next |
-| 9–13 | AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
+| **8 — Ingestion** | MLS/RESO connector, normalization, dedup, quality gate, partner-route publishing + operator review | ✅ built |
+| 9 — AI agent | Conversational agent over member file, escalation rules, program matching | ⏳ next |
+| 10–13 | Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
 

@@ -252,6 +252,29 @@ async function createStaff({ onboarded = true } = {}) {
   return { userId, email, token: session.accessToken };
 }
 
+// Create a user with an arbitrary role + matching profile row, and log in.
+async function createUserWithRole(role, { certified = false } = {}) {
+  const email = `${role}_${process.pid}_${Math.floor(Math.random() * 1e9)}@example.test`;
+  const password = 'role-password-123';
+  const hash = await hashPassword(password);
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, password_hash, role, status) VALUES ($1,$2,$3,'active') RETURNING id`,
+    [email, hash, role],
+  );
+  const userId = rows[0].id;
+  if (['specialist', 'manager', 'admin'].includes(role)) {
+    await pool.query(`INSERT INTO staff (user_id, title) VALUES ($1, $2)`, [userId, role === 'manager' ? 'manager' : 'credit_specialist']);
+  } else if (role === 'partner') {
+    await pool.query(
+      `INSERT INTO partners (user_id, company_name, partner_type, certification_status, verified_authority)
+       VALUES ($1, 'Acme Builders', 'gc', $2, true)`,
+      [userId, certified ? 'certified' : 'pending'],
+    );
+  }
+  const login = await post('/api/auth/login', { email, password });
+  return { userId, email, token: (await login.json()).accessToken };
+}
+
 async function memberIdFor(email) {
   const { rows } = await pool.query(
     `SELECT m.id FROM members m JOIN users u ON u.id = m.user_id WHERE u.email = $1`,
@@ -403,4 +426,53 @@ test('marketplace: listings are source-labeled with est monthly; plan-to-lot ret
     assert.ok(m.estMonthly > 0);
     assert.equal(m.fit.fits, true);
   }
+});
+
+test('ingestion: MLS sync dedups and quality-gates; second run inserts nothing', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const manager = await createUserWithRole('manager');
+
+  const first = await (await fetch(`${base}/api/ingest/mls`, { method: 'POST', headers: authed(manager.token) })).json();
+  assert.equal(first.fetched, 4);
+  assert.equal(first.inserted, 2);   // 200500 + 200501
+  assert.equal(first.skipped, 1);    // 100234 dup of seeded listing
+  assert.equal(first.rejected, 1);   // 200502 fails quality gate
+  assert.ok(first.rejections[0].issues.length > 0);
+
+  const second = await (await fetch(`${base}/api/ingest/mls`, { method: 'POST', headers: authed(manager.token) })).json();
+  assert.equal(second.inserted, 0);  // all now exist
+});
+
+test('ingestion: partner submits, approval blocked until certified', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const partner = await createUserWithRole('partner', { certified: false });
+  const manager = await createUserWithRole('manager');
+
+  // Partner submits a listing — held pending.
+  const submitted = await fetch(`${base}/api/ingest/partner-listings`, {
+    method: 'POST', headers: { ...authed(partner.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'house', price: 210000, address: '5 Cedar Ln', beds: 3, baths: 2, sqft: 1250 }),
+  });
+  assert.equal(submitted.status, 201);
+  const listingId = (await submitted.json()).listing.id;
+
+  // Appears in the operator pending queue.
+  const pending = await (await fetch(`${base}/api/ingest/pending`, { headers: authed(manager.token) })).json();
+  assert.ok(pending.pending.some((p) => p.id === listingId));
+
+  // Approval blocked while partner is uncertified (spec §6.1).
+  const blocked = await fetch(`${base}/api/ingest/listings/${listingId}/review`, {
+    method: 'POST', headers: { ...authed(manager.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'approve' }),
+  });
+  assert.equal(blocked.status, 403);
+
+  // Certify the partner, then approval succeeds and the listing goes live.
+  await pool.query(`UPDATE partners SET certification_status = 'certified' WHERE user_id = $1`, [partner.userId]);
+  const approved = await fetch(`${base}/api/ingest/listings/${listingId}/review`, {
+    method: 'POST', headers: { ...authed(manager.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ decision: 'approve' }),
+  });
+  assert.equal(approved.status, 200);
+  assert.equal((await approved.json()).listing.status, 'active');
 });
