@@ -476,3 +476,52 @@ test('ingestion: partner submits, approval blocked until certified', async (t) =
   assert.equal(approved.status, 200);
   assert.equal((await approved.json()).listing.status, 'active');
 });
+
+test('agent: answers plan questions and escalates rate/term/legal', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+  const jsonHeaders = { ...authed(accessToken), 'content-type': 'application/json' };
+
+  const ans = await (await fetch(`${base}/api/agent/ask`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ question: 'What day of my plan am I on?' }),
+  })).json();
+  assert.equal(ans.escalated, false);
+  assert.ok(ans.answer.length > 0);
+
+  const esc = await (await fetch(`${base}/api/agent/ask`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ question: 'What interest rate can I get?' }),
+  })).json();
+  assert.equal(esc.escalated, true);
+  assert.equal(esc.topic, 'rate');
+});
+
+test('assistance: program matching evaluates rules_json and lowers marketplace est monthly', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+
+  // Give the member income (via sync) and a visible-to-engine credit score.
+  await fetch(`${base}/api/money/link`, {
+    method: 'POST', headers: { ...authed(accessToken), 'content-type': 'application/json' }, body: JSON.stringify({ publicToken: 'x' }),
+  });
+  await fetch(`${base}/api/money/sync`, { method: 'POST', headers: authed(accessToken) });
+  await fetch(`${base}/api/credit/pull`, { method: 'POST', headers: authed(accessToken) });
+
+  // Baseline marketplace est monthly (no assistance yet).
+  const before = await (await fetch(`${base}/api/marketplace/listings?type=house`, { headers: authed(accessToken) })).json();
+  const houseBefore = before.listings[0];
+
+  // Evaluate assistance — with mock income (~$22k/yr) and score 612, income-limited
+  // programs with a low-enough credit floor should match.
+  const assist = await (await fetch(`${base}/api/assistance`, { headers: authed(accessToken) })).json();
+  assert.ok(Array.isArray(assist.programs));
+  assert.ok(assist.programs.length >= 5);
+  assert.ok(assist.total >= 0);
+
+  // If any assistance matched, the same house now estimates a lower monthly payment.
+  if (assist.total > 0) {
+    const after = await (await fetch(`${base}/api/marketplace/listings?type=house`, { headers: authed(accessToken) })).json();
+    const houseAfter = after.listings.find((l) => l.id === houseBefore.id);
+    assert.ok(houseAfter.estMonthly <= houseBefore.estMonthly);
+    assert.ok(houseAfter.assistanceApplied > 0);
+  }
+});

@@ -13,6 +13,7 @@ import Team from './screens/Team.jsx';
 import Learn from './screens/Learn.jsx';
 import Marketplace from './screens/Marketplace.jsx';
 import PlanToLot from './screens/PlanToLot.jsx';
+import Agent from './screens/Agent.jsx';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/learn" element={<Learn />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/marketplace/plans/:planId" element={<PlanToLot />} />
+              <Route path="/agent" element={<Agent />} />
               <Route path="/disputes" element={<Disputes />} />
             </Route>
 

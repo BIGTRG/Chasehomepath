@@ -226,3 +226,7 @@ body {
 .badge.src-optioned { background: #eef7ed; color: #2f5c2b; }
 .badge.src-partner { background: #fff2e2; color: #a5610a; }
 .badge.src-mls { background: #f1eafb; color: #6b3fa0; }
+
+/* Agent escalation */
+.bubble.escalated { background: #fff7ec; color: #7a4d05; border: 1px solid #f4d9a8; }
+.escalate-tag { font-size: 11px; font-weight: 700; margin-top: 6px; opacity: 0.85; }

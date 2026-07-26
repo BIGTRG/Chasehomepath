@@ -68,6 +68,13 @@ export default function PlanHome() {
         <div className="item-meta">Homes, lots, and build plans — priced with your assistance.</div>
       </Link>
 
+      <Link to="/agent" className="card item-card">
+        <div className="item-top">
+          <span className="item-creditor">Ask CHASE →</span>
+        </div>
+        <div className="item-meta">Questions about your plan, credit, or money? Ask anytime.</div>
+      </Link>
+
       {/* Milestones */}
       {data.milestones.length > 0 && (
         <div className="card">

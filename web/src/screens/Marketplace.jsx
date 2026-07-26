@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { market } from '../api/client.js';
+import { market, assistance as assistanceApi } from '../api/client.js';
 
 const usd = (n) => `$${Number(n ?? 0).toLocaleString()}`;
 const TABS = [
@@ -15,7 +15,12 @@ export default function Marketplace() {
   const [tab, setTab] = useState('house');
   const [listings, setListings] = useState(null);
   const [plans, setPlans] = useState(null);
+  const [assist, setAssist] = useState(null);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    assistanceApi.mine().then(setAssist).catch(() => setAssist(null));
+  }, []);
 
   useEffect(() => {
     setError(null);
@@ -31,6 +36,16 @@ export default function Marketplace() {
     <div className="content">
       <h1 className="h1">Marketplace</h1>
       <p className="sub">Homes, lots, and build plans — priced with your assistance applied.</p>
+
+      {assist && assist.total > 0 && (
+        <div className="rule-banner ready" style={{ marginBottom: 16 }}>
+          <span className="dot" />
+          <span>
+            You may qualify for about <strong>{usd(assist.total)}</strong> across {assist.eligible.length} assistance
+            program{assist.eligible.length === 1 ? '' : 's'} — already applied to the estimates below.
+          </span>
+        </div>
+      )}
 
       <div className="seg">
         {TABS.map((t) => (

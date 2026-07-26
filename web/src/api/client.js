@@ -136,3 +136,11 @@ export const market = {
   plans: () => api('/marketplace/plans'),
   planLots: (planId) => api(`/marketplace/plans/${planId}/lots`),
 };
+
+export const agent = {
+  ask: (question) => api('/agent/ask', { method: 'POST', body: { question } }),
+};
+
+export const assistance = {
+  mine: () => api('/assistance'),
+};

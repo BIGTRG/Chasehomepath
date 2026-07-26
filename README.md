@@ -21,8 +21,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **6 — Education** | Curriculum, assignment-from-plan, data-driven lock/unlock, before/during/after, Learn screen | ✅ built |
 | **7 — Marketplace** | Listings (source-labeled), house-plan catalog, lot-plan fit, plan-to-lot all-in, per-member enrichment | ✅ built |
 | **8 — Ingestion** | MLS/RESO connector, normalization, dedup, quality gate, partner-route publishing + operator review | ✅ built |
-| 9 — AI agent | Conversational agent over member file, escalation rules, program matching | ⏳ next |
-| 10–13 | Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
+| **9 — AI agent** | Member agent over own file, deterministic rate/term/legal escalation, live program matching | ✅ built |
+| 10 — Operator console | Roster, client detail, team mgmt, onboarding queue, inventory, ratings, HQ board | ⏳ next |
+| 11–13 | Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
 
