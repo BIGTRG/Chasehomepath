@@ -9,6 +9,7 @@ import Credit from './screens/Credit.jsx';
 import CreditItem from './screens/CreditItem.jsx';
 import Disputes from './screens/Disputes.jsx';
 import Money from './screens/Money.jsx';
+import Team from './screens/Team.jsx';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
               <Route path="/credit" element={<Credit />} />
               <Route path="/credit/items/:id" element={<CreditItem />} />
               <Route path="/money" element={<Money />} />
+              <Route path="/team" element={<Team />} />
               <Route path="/disputes" element={<Disputes />} />
             </Route>
 

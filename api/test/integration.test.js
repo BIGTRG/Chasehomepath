@@ -3,6 +3,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { pool, healthcheck, closePool } from '../src/db/pool.js';
+import { hashPassword } from '../src/auth/password.js';
 
 // End-to-end tests against a real PostgreSQL. They self-skip when no DB is reachable
 // (local runs without Postgres); CI provides the database and runs them for real.
@@ -226,4 +227,119 @@ test('money: link, sync, budgets, savings, and coaching', async (t) => {
   assert.ok(ov.budgets.some((b) => b.category === 'dining' && b.actual > b.monthly_target));
   assert.ok(ov.coaching.some((c) => c.type === 'over_budget'));
   assert.ok(ov.savings.some((s) => s.label === 'Down payment'));
+});
+
+// Create a staff user directly. onboarded=true gives a complete case + verified license.
+async function createStaff({ onboarded = true } = {}) {
+  const email = `staff_${process.pid}_${Math.floor(Math.random() * 1e9)}@example.test`;
+  const password = 'staff-password-123';
+  const hash = await hashPassword(password);
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, password_hash, role, status) VALUES ($1,$2,'specialist','active') RETURNING id`,
+    [email, hash],
+  );
+  const userId = rows[0].id;
+  await pool.query(`INSERT INTO staff (user_id, title) VALUES ($1,'credit_specialist')`, [userId]);
+  if (onboarded) {
+    await pool.query(`INSERT INTO onboarding_cases (user_id, role_type, stage) VALUES ($1,'w2','complete')`, [userId]);
+    await pool.query(
+      `INSERT INTO license_records (user_id, license_type, status, verified_at) VALUES ($1,'nc_broker','active', now())`,
+      [userId],
+    );
+  }
+  const login = await post('/api/auth/login', { email, password });
+  const session = await login.json();
+  return { userId, email, token: session.accessToken };
+}
+
+async function memberIdFor(email) {
+  const { rows } = await pool.query(
+    `SELECT m.id FROM members m JOIN users u ON u.id = m.user_id WHERE u.email = $1`,
+    [email],
+  );
+  return rows[0].id;
+}
+
+test('team: onboarding gate blocks assigning a non-onboarded staffer', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const member = await registerMember();
+  const memberId = await memberIdFor(member.email);
+  const staff = await createStaff({ onboarded: false });
+
+  const res = await fetch(`${base}/api/team/members/${memberId}/assign`, {
+    method: 'POST',
+    headers: { ...authed(staff.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId: staff.userId, assigneeKind: 'staff', roleOnTeam: 'Credit Specialist' }),
+  });
+  assert.equal(res.status, 403);
+  assert.equal((await res.json()).error.code, 'compliance_block');
+});
+
+test('team: assign, no-PII team list, in-app messaging, ratings', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const member = await registerMember();
+  const memberId = await memberIdFor(member.email);
+  const staff = await createStaff({ onboarded: true });
+
+  // Assign the onboarded staffer.
+  const assignRes = await fetch(`${base}/api/team/members/${memberId}/assign`, {
+    method: 'POST',
+    headers: { ...authed(staff.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId: staff.userId, assigneeKind: 'staff', roleOnTeam: 'Credit Specialist' }),
+  });
+  assert.equal(assignRes.status, 201);
+
+  // Member sees the team — but NEVER the staffer's email/phone (in-app only).
+  const teamRes = await (await fetch(`${base}/api/team`, { headers: authed(member.accessToken) })).json();
+  assert.equal(teamRes.team.length, 1);
+  assert.equal(JSON.stringify(teamRes.team).includes(staff.email), false);
+  const threadId = teamRes.threadId;
+
+  // Member sends a message; staffer (on team) can read it and reply.
+  await fetch(`${base}/api/team/threads/${threadId}/messages`, {
+    method: 'POST', headers: { ...authed(member.accessToken), 'content-type': 'application/json' },
+    body: JSON.stringify({ body: 'Hi team!' }),
+  });
+  const staffView = await (await fetch(`${base}/api/team/threads/${threadId}/messages`, { headers: authed(staff.token) })).json();
+  assert.ok(staffView.messages.some((m) => m.body === 'Hi team!'));
+
+  // A stranger cannot read the thread.
+  const stranger = await registerMember();
+  const denied = await fetch(`${base}/api/team/threads/${threadId}/messages`, { headers: authed(stranger.accessToken) });
+  assert.equal(denied.status, 403);
+
+  // Member rates the staffer; the average shows up in the team list.
+  await fetch(`${base}/api/team/ratings`, {
+    method: 'POST', headers: { ...authed(member.accessToken), 'content-type': 'application/json' },
+    body: JSON.stringify({ ratedUserId: staff.userId, score: 5 }),
+  });
+  const team2 = await (await fetch(`${base}/api/team`, { headers: authed(member.accessToken) })).json();
+  assert.equal(team2.team[0].avgResponsiveness, 5);
+});
+
+test('team: completing a consultation unlocks the credit score', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const member = await registerMember();
+  const memberId = await memberIdFor(member.email);
+  const staff = await createStaff({ onboarded: true });
+
+  // Pull credit — score withheld before the meeting.
+  await fetch(`${base}/api/credit/pull`, { method: 'POST', headers: authed(member.accessToken) });
+  let ov = await (await fetch(`${base}/api/credit`, { headers: authed(member.accessToken) })).json();
+  assert.equal(ov.score.withheld, true);
+
+  // Create a consultation appointment and mark it complete.
+  const appt = await (await fetch(`${base}/api/team/members/${memberId}/appointments`, {
+    method: 'POST', headers: { ...authed(staff.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ participantUserId: staff.userId, type: 'in_person', scheduledAt: '2026-07-20T15:00:00Z', isConsultation: true }),
+  })).json();
+  await fetch(`${base}/api/team/appointments/${appt.appointment.id}`, {
+    method: 'PATCH', headers: { ...authed(staff.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'completed' }),
+  });
+
+  // Now the score is visible.
+  ov = await (await fetch(`${base}/api/credit`, { headers: authed(member.accessToken) })).json();
+  assert.equal(ov.score.withheld, false);
+  assert.equal(ov.score.value, 612);
 });

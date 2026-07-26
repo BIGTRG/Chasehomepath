@@ -4,7 +4,7 @@ const tabs = [
   { to: '/', label: 'Plan', icon: '🏠', end: true },
   { to: '/credit', label: 'Credit', icon: '📊' },
   { to: '/money', label: 'Money', icon: '💰' },
-  { to: '/disputes', label: 'Disputes', icon: '📄' },
+  { to: '/team', label: 'Team', icon: '👥' },
 ];
 
 export default function BottomNav() {
