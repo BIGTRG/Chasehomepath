@@ -169,6 +169,12 @@ export const ingest = {
   review: (id, decision) => api(`/ingest/listings/${id}/review`, { method: 'POST', body: { decision } }),
 };
 
+export const onboarding = {
+  queue: () => api('/onboarding/queue'),
+  getCase: (id) => api(`/onboarding/cases/${id}`),
+  advance: (stepId, decision) => api(`/onboarding/steps/${stepId}/advance`, { method: 'POST', body: { decision } }),
+};
+
 export const partner = {
   profile: () => api('/partner/profile'),
   clients: () => api('/partner/clients'),

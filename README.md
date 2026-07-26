@@ -24,8 +24,8 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **9 — AI agent** | Member agent over own file, deterministic rate/term/legal escalation, live program matching | ✅ built |
 | **10 — Operator console** | Roster, client detail, team capacity, ratings dashboard, inventory review, HQ user/program admin | ✅ built |
 | **11 — Partner portal** | Certification (e-sign + license verify), assigned clients, inventory publishing, compliance profile | ✅ built |
-| 12 — Workforce onboarding | Application→license→background→agreement→payroll→training→certification→provisioning | ⏳ next |
-| 13 | Homeowner mode | ⏳ |
+| **12 — Workforce onboarding** | Gated pipeline (application→…→provisioning), license/e-sign integrations, operator queue | ✅ built |
+| 13 — Homeowner mode | Post-purchase: maintenance, escrow/taxes, value tracking, refi alerts | ⏳ last |
 
 ## Layout
 

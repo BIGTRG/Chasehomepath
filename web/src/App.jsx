@@ -26,6 +26,7 @@ import ClientDetail from './screens/operator/ClientDetail.jsx';
 import TeamDash from './screens/operator/TeamDash.jsx';
 import Inventory from './screens/operator/Inventory.jsx';
 import Admin from './screens/operator/Admin.jsx';
+import Onboarding from './screens/operator/Onboarding.jsx';
 
 // Partner surface
 import PartnerHome from './screens/partner/PartnerHome.jsx';
@@ -63,6 +64,7 @@ function OperatorSurface() {
         <Route path="/clients/:memberId" element={<ClientDetail />} />
         <Route path="/team" element={<TeamDash />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/admin" element={<Admin />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

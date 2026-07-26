@@ -525,6 +525,69 @@ test('operator: roster scoping, client detail access, capacity, ratings, HQ admi
   assert.equal(forbidden.status, 403);
 });
 
+test('onboarding: pipeline runs to complete and opens the onboarding gate', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const admin = await createUserWithRole('admin');
+  const newHire = await createStaff({ onboarded: false });
+  const member = await registerMember();
+  const memberId = await memberIdFor(member.email);
+  const adminHeaders = { ...authed(admin.token), 'content-type': 'application/json' };
+
+  // Give the hire a license so the license_verify step can pass.
+  await pool.query(
+    `INSERT INTO license_records (user_id, license_type, number, status) VALUES ($1,'nc_broker',$2,'unverified')`,
+    [newHire.userId, (await import('../src/lib/crypto.js')).encrypt('NC-9001')],
+  );
+
+  // Before onboarding completes, assigning the hire to a client is blocked (gate).
+  const early = await fetch(`${base}/api/team/members/${memberId}/assign`, {
+    method: 'POST', headers: { ...authed(admin.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId: newHire.userId, assigneeKind: 'staff', roleOnTeam: 'Specialist' }),
+  });
+  assert.equal(early.status, 403);
+
+  // Start + walk the pipeline.
+  const started = await (await fetch(`${base}/api/onboarding/cases`, {
+    method: 'POST', headers: adminHeaders, body: JSON.stringify({ userId: newHire.userId, roleType: 'w2' }),
+  })).json();
+  const caseView = await (await fetch(`${base}/api/onboarding/cases/${started.caseId}`, { headers: authed(admin.token) })).json();
+  assert.equal(caseView.steps.length, 8);
+
+  let lastStage;
+  for (const step of caseView.steps) {
+    const r = await (await fetch(`${base}/api/onboarding/steps/${step.id}/advance`, {
+      method: 'POST', headers: adminHeaders, body: JSON.stringify({ decision: 'pass' }),
+    })).json();
+    lastStage = r.stage;
+  }
+  assert.equal(lastStage, 'complete');
+
+  // Now assignment succeeds — onboarding complete + license verified.
+  const ok = await fetch(`${base}/api/team/members/${memberId}/assign`, {
+    method: 'POST', headers: { ...authed(admin.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId: newHire.userId, assigneeKind: 'staff', roleOnTeam: 'Specialist' }),
+  });
+  assert.equal(ok.status, 201);
+});
+
+test('onboarding: license_verify fails when no license is on file', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const admin = await createUserWithRole('admin');
+  const hire = await createStaff({ onboarded: false });
+  const adminHeaders = { ...authed(admin.token), 'content-type': 'application/json' };
+
+  const started = await (await fetch(`${base}/api/onboarding/cases`, {
+    method: 'POST', headers: adminHeaders, body: JSON.stringify({ userId: hire.userId, roleType: 'w2' }),
+  })).json();
+  const { steps } = await (await fetch(`${base}/api/onboarding/cases/${started.caseId}`, { headers: authed(admin.token) })).json();
+  const licenseStep = steps.find((s) => s.step === 'license_verify');
+
+  const res = await fetch(`${base}/api/onboarding/steps/${licenseStep.id}/advance`, {
+    method: 'POST', headers: adminHeaders, body: JSON.stringify({ decision: 'pass' }),
+  });
+  assert.equal(res.status, 403); // cannot pass without a verifiable license
+});
+
 test('partner: certification flow with license verification gates go-live', async (t) => {
   if (!dbUp) return t.skip('no database reachable');
   const partner = await createUserWithRole('partner', { certified: false });

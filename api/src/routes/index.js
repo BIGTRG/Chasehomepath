@@ -12,6 +12,7 @@ import agentRoutes from './agent.routes.js';
 import assistanceRoutes from './assistance.routes.js';
 import operatorRoutes from './operator.routes.js';
 import partnerRoutes from './partner.routes.js';
+import onboardingRoutes from './onboarding.routes.js';
 
 const router = Router();
 
@@ -28,7 +29,8 @@ router.use('/agent', agentRoutes);
 router.use('/assistance', assistanceRoutes);
 router.use('/operator', operatorRoutes);
 router.use('/partner', partnerRoutes);
+router.use('/onboarding', onboardingRoutes);
 
-// Later phases mount here: /onboarding (12), /home (13).
+// Later phases mount here: /home (13).
 
 export default router;

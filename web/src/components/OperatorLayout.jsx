@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 export default function OperatorLayout() {
   const { user, logout } = useAuth();
   const isAdmin = user.role === 'admin';
+  const isManager = user.role === 'admin' || user.role === 'manager';
   return (
     <div className="op-shell">
       <aside className="op-side">
@@ -13,6 +14,7 @@ export default function OperatorLayout() {
           <NavLink to="/" end>Clients</NavLink>
           <NavLink to="/team">Team</NavLink>
           <NavLink to="/inventory">Inventory</NavLink>
+          {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
           {isAdmin && <NavLink to="/admin">HQ Admin</NavLink>}
         </nav>
         <button className="btn secondary op-signout" onClick={logout}>Sign out</button>
