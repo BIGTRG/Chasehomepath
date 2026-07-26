@@ -343,3 +343,31 @@ test('team: completing a consultation unlocks the credit score', async (t) => {
   assert.equal(ov.score.withheld, false);
   assert.equal(ov.score.value, 612);
 });
+
+test('education: curriculum assigned, before unlocked, during/after locked; complete a module', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+
+  const learn = await (await fetch(`${base}/api/learn`, { headers: authed(accessToken) })).json();
+  assert.ok(learn.groups.before.length > 0);
+  assert.ok(learn.groups.during.length > 0);
+  assert.ok(learn.groups.after.length > 0);
+
+  // "before" modules are available on day 0; "during"/"after" are locked (plan_day 0, active).
+  assert.ok(learn.groups.before.every((m) => m.status === 'available'));
+  assert.ok(learn.groups.during.every((m) => m.status === 'locked'));
+  assert.ok(learn.groups.after.every((m) => m.status === 'locked'));
+
+  // Completing an available module works and moves the progress counter.
+  const target = learn.groups.before[0];
+  const done = await fetch(`${base}/api/learn/${target.moduleId}/done`, { method: 'POST', headers: authed(accessToken) });
+  assert.equal(done.status, 200);
+  const after = await (await fetch(`${base}/api/learn`, { headers: authed(accessToken) })).json();
+  assert.ok(after.progress.done >= 1);
+  assert.ok(after.groups.before.find((m) => m.moduleId === target.moduleId).status === 'done');
+
+  // A locked module cannot be completed.
+  const locked = after.groups.during[0];
+  const blocked = await fetch(`${base}/api/learn/${locked.moduleId}/done`, { method: 'POST', headers: authed(accessToken) });
+  assert.equal(blocked.status, 404);
+});

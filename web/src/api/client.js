@@ -122,3 +122,8 @@ export const team = {
   send: (threadId, body) => api(`/team/threads/${threadId}/messages`, { method: 'POST', body: { body } }),
   rate: (ratedUserId, score) => api('/team/ratings', { method: 'POST', body: { ratedUserId, score } }),
 };
+
+export const learn = {
+  mine: () => api('/learn'),
+  complete: (moduleId) => api(`/learn/${moduleId}/done`, { method: 'POST' }),
+};
