@@ -9,6 +9,7 @@ import {
   disableMfa,
   toPublic,
 } from '../services/user.service.js';
+import { createMemberProfile } from '../services/member.service.js';
 import { verifyPassword, validatePasswordStrength } from '../auth/password.js';
 import {
   signAccessToken,
@@ -71,12 +72,12 @@ export async function register(req, res) {
   if (!strength.ok) throw new ValidationError(strength.reason);
 
   const session = await withTransaction(async (db) => {
-    // Phase 1 creates the account (the auth spine). Phase 2 extends this transaction
-    // to also create the members row + plan + six tracks.
     const user = await createUser(
       { email: input.email, phone: input.phone ?? null, password: input.password, role: 'member' },
       db,
     );
+    // The product is the plan (spec §1): every member gets a plan + six tracks at signup.
+    await createMemberProfile(user.id, {}, db);
     await audit(
       {
         actorUserId: user.id,

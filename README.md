@@ -14,8 +14,8 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | Phase | Scope | State |
 |---|---|---|
 | **1 — Foundation** | Repo scaffold, full PostgreSQL schema, auth + roles + MFA, column encryption, audit log, API skeleton, CI | ✅ built |
-| 2 — Plan core | Member signup/login, plan + six tracks, plan home, milestones, 90-day rule | ⏳ next |
-| 3 — Credit engine | Rules engine, credit screens, member-initiated disputes | ⏳ |
+| **2 — Plan core** | Member signup/login, plan + six tracks, plan home screen, milestones, 90-day rule; mobile-first React app | ✅ built |
+| 3 — Credit engine | Rules engine, credit screens, member-initiated disputes | ⏳ next |
 | 4–13 | Money, Team, Education, Marketplace, Ingestion, AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
@@ -77,6 +77,27 @@ openssl rand -base64 32     # ENCRYPTION_KEY (must decode to 32 bytes)
 | POST | `/api/auth/mfa/setup` | Begin TOTP enrollment (returns QR) |
 | POST | `/api/auth/mfa/enable` | Confirm TOTP code, enable MFA |
 | POST | `/api/auth/mfa/disable` | Disable MFA (requires current code) |
+
+## Plan API (Phase 2)
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| GET  | `/api/plan` | member | Plan home: day count, six-track progress, milestones, 90-day status |
+| PATCH | `/api/plan/milestones/:id` | member | Member marks their own milestone done/undone |
+| PATCH | `/api/plan/:memberId/tracks/:trackType` | staff | Update a track's progress |
+| POST | `/api/plan/:memberId/placement-ready` | staff | Mark placement-ready (blocked in code before day 90) |
+
+The React app (`web/`) ships the first three member screens: **Create account** (with the
+explicit data-never-sold consent), **Sign in** (with MFA step), and **Plan home** (leads with
+the day count, shows the six tracks and the 90-day rule — no score).
+
+### Running both tiers in dev
+
+```bash
+docker compose up -d db && npm run migrate   # once
+npm --workspace api run dev                   # API on :4000
+npm --workspace web run dev                   # web on :5173 (proxies /api)
+```
 
 ## Compliance (Section 8 — load-bearing)
 
