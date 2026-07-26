@@ -230,3 +230,46 @@ body {
 /* Agent escalation */
 .bubble.escalated { background: #fff7ec; color: #7a4d05; border: 1px solid #f4d9a8; }
 .escalate-tag { font-size: 11px; font-weight: 700; margin-top: 6px; opacity: 0.85; }
+
+/* ── Operator console (desktop-first) ── */
+.op-shell { display: flex; min-height: 100vh; }
+.op-side {
+  width: 210px; flex: none; background: var(--navy); color: #fff; padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.op-brand { font-weight: 800; font-size: 18px; }
+.op-brand .path { color: var(--orange); }
+.op-role { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; font-weight: 600; }
+.op-nav { display: flex; flex-direction: column; gap: 2px; }
+.op-nav a { color: #cdd6e6; text-decoration: none; padding: 10px 12px; border-radius: 8px; font-weight: 600; font-size: 14px; }
+.op-nav a.active, .op-nav a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.op-signout { margin-top: auto; color: #cdd6e6; border: 1px solid rgba(255,255,255,0.2); }
+.op-main { flex: 1; padding: 28px 32px; max-width: 1100px; }
+
+.op-filters { display: flex; gap: 8px; margin-bottom: 16px; }
+.chip { border: 1px solid var(--line); background: #fff; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; text-transform: capitalize; }
+.chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+.op-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 14px; }
+.op-table th { text-align: left; background: #f6f7f9; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.op-table td { padding: 10px 12px; border-top: 1px solid var(--line); }
+.op-table a { color: var(--navy); font-weight: 600; text-decoration: none; }
+.op-table tr.flagged { background: #fef3f2; }
+
+.hbadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; }
+.hbadge.green { background: #eef7ed; color: #2f5c2b; }
+.hbadge.amber { background: #fff7ec; color: #a5610a; }
+.hbadge.red { background: #fef3f2; color: #b42318; }
+
+.op-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.op-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.op-row:first-child { border-top: none; }
+.op-actions { display: flex; gap: 8px; }
+.op-msg { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--ink); }
+.rules { font-size: 11px; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .op-grid { grid-template-columns: 1fr; }
+  .op-side { width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .op-shell { flex-direction: column; }
+}

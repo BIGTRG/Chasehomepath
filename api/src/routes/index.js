@@ -10,6 +10,7 @@ import marketplaceRoutes from './marketplace.routes.js';
 import ingestionRoutes from './ingestion.routes.js';
 import agentRoutes from './agent.routes.js';
 import assistanceRoutes from './assistance.routes.js';
+import operatorRoutes from './operator.routes.js';
 
 const router = Router();
 
@@ -24,7 +25,8 @@ router.use('/marketplace', marketplaceRoutes);
 router.use('/ingest', ingestionRoutes);
 router.use('/agent', agentRoutes);
 router.use('/assistance', assistanceRoutes);
+router.use('/operator', operatorRoutes);
 
-// Later phases mount here: /operator (10), /partner (11), /onboarding (12), /home (13).
+// Later phases mount here: /partner (11), /onboarding (12), /home (13).
 
 export default router;

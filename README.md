@@ -22,8 +22,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **7 — Marketplace** | Listings (source-labeled), house-plan catalog, lot-plan fit, plan-to-lot all-in, per-member enrichment | ✅ built |
 | **8 — Ingestion** | MLS/RESO connector, normalization, dedup, quality gate, partner-route publishing + operator review | ✅ built |
 | **9 — AI agent** | Member agent over own file, deterministic rate/term/legal escalation, live program matching | ✅ built |
-| 10 — Operator console | Roster, client detail, team mgmt, onboarding queue, inventory, ratings, HQ board | ⏳ next |
-| 11–13 | Partner portal, Onboarding, Homeowner mode | ⏳ |
+| **10 — Operator console** | Roster, client detail, team capacity, ratings dashboard, inventory review, HQ user/program admin | ✅ built |
+| 11 — Partner portal | Certification flow, assigned clients, inventory publishing, compliance profile | ⏳ next |
+| 12–13 | Onboarding pipeline, Homeowner mode | ⏳ |
 
 ## Layout
 

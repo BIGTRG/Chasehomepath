@@ -144,3 +144,27 @@ export const agent = {
 export const assistance = {
   mine: () => api('/assistance'),
 };
+
+export const operator = {
+  roster: (params = {}) => {
+    const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v))).toString();
+    return api(`/operator/roster${q ? `?${q}` : ''}`);
+  },
+  client: (memberId) => api(`/operator/members/${memberId}`),
+  capacity: () => api('/operator/capacity'),
+  ratings: () => api('/operator/ratings'),
+  inventory: (params = {}) => {
+    const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v))).toString();
+    return api(`/operator/inventory${q ? `?${q}` : ''}`);
+  },
+  retire: (id) => api(`/operator/inventory/${id}/retire`, { method: 'POST' }),
+  users: (role) => api(`/operator/users${role ? `?role=${role}` : ''}`),
+  patchUser: (id, body) => api(`/operator/users/${id}`, { method: 'PATCH', body }),
+  programs: () => api('/operator/programs'),
+};
+
+export const ingest = {
+  mls: () => api('/ingest/mls', { method: 'POST' }),
+  pending: () => api('/ingest/pending'),
+  review: (id, decision) => api(`/ingest/listings/${id}/review`, { method: 'POST', body: { decision } }),
+};

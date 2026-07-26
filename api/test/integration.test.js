@@ -477,6 +477,54 @@ test('ingestion: partner submits, approval blocked until certified', async (t) =
   assert.equal((await approved.json()).listing.status, 'active');
 });
 
+test('operator: roster scoping, client detail access, capacity, ratings, HQ admin', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const member = await registerMember();
+  const memberId = await memberIdFor(member.email);
+  const admin = await createUserWithRole('admin');
+  const specialist = await createStaff({ onboarded: true });
+  const outsider = await createStaff({ onboarded: true });
+
+  // Admin sees the member in the roster.
+  const adminRoster = await (await fetch(`${base}/api/operator/roster`, { headers: authed(admin.token) })).json();
+  assert.ok(adminRoster.roster.some((r) => r.memberId === memberId));
+
+  // A specialist NOT assigned sees an empty (or member-absent) roster.
+  const outRoster = await (await fetch(`${base}/api/operator/roster`, { headers: authed(outsider.token) })).json();
+  assert.equal(outRoster.roster.some((r) => r.memberId === memberId), false);
+
+  // Assign the specialist, then they can open the client detail.
+  await fetch(`${base}/api/team/members/${memberId}/assign`, {
+    method: 'POST', headers: { ...authed(specialist.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ assigneeUserId: specialist.userId, assigneeKind: 'staff', roleOnTeam: 'Credit Specialist' }),
+  });
+  const detail = await fetch(`${base}/api/operator/members/${memberId}`, { headers: authed(specialist.token) });
+  assert.equal(detail.status, 200);
+  const detailJson = await detail.json();
+  assert.equal(detailJson.plan.tracks.length, 6);
+
+  // An unassigned specialist is forbidden from the detail.
+  const denied = await fetch(`${base}/api/operator/members/${memberId}`, { headers: authed(outsider.token) });
+  assert.equal(denied.status, 403);
+
+  // Capacity + ratings dashboards (manager/admin).
+  const cap = await (await fetch(`${base}/api/operator/capacity`, { headers: authed(admin.token) })).json();
+  assert.ok(cap.capacity.some((c) => c.userId === specialist.userId && c.clientCount >= 1));
+
+  // HQ admin: list users and flip a status.
+  const users = await (await fetch(`${base}/api/operator/users?role=member`, { headers: authed(admin.token) })).json();
+  assert.ok(users.users.length > 0);
+  const patched = await fetch(`${base}/api/operator/users/${member.user.id}`, {
+    method: 'PATCH', headers: { ...authed(admin.token), 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'suspended' }),
+  });
+  assert.equal((await patched.json()).user.status, 'suspended');
+
+  // A specialist cannot reach the admin-only users endpoint.
+  const forbidden = await fetch(`${base}/api/operator/users`, { headers: authed(specialist.token) });
+  assert.equal(forbidden.status, 403);
+});
+
 test('agent: answers plan questions and escalates rate/term/legal', async (t) => {
   if (!dbUp) return t.skip('no database reachable');
   const { accessToken } = await registerMember();
