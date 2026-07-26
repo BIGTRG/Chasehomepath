@@ -96,3 +96,13 @@ export const plan = {
   setMilestone: (id, completed) =>
     api(`/plan/milestones/${id}`, { method: 'PATCH', body: { completed } }),
 };
+
+export const credit = {
+  overview: () => api('/credit'),
+  pull: () => api('/credit/pull', { method: 'POST' }),
+  item: (id) => api(`/credit/items/${id}`),
+  dispute: (id, method = 'online') =>
+    api(`/credit/items/${id}/dispute`, { method: 'POST', body: { method } }),
+  withdraw: (id) => api(`/credit/disputes/${id}/withdraw`, { method: 'POST' }),
+  disputes: () => api('/credit/disputes'),
+};

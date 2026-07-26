@@ -137,3 +137,49 @@ body {
 .loading { text-align: center; color: var(--muted); padding: 60px 0; }
 
 .mfa-hint { font-size: 12px; color: var(--muted); margin-top: -6px; margin-bottom: 12px; }
+
+/* Member layout + bottom nav */
+.member-body { flex: 1; padding-bottom: 72px; } /* room for fixed nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: var(--maxw);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  background: #fff; border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav a {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 0 12px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 600;
+}
+.bottom-nav a.active { color: var(--navy); }
+.bottom-nav .nav-icon { font-size: 20px; }
+
+.back { width: auto; padding: 6px 0; text-align: left; margin-bottom: 4px; }
+
+/* Score card (withheld state) */
+.score-card { text-align: center; }
+.score-hidden { font-size: 40px; letter-spacing: 6px; color: var(--navy); font-weight: 800; }
+.score-num { font-size: 44px; font-weight: 800; color: var(--navy); }
+.score-note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+/* Credit item cards */
+.item-card { display: block; text-decoration: none; color: inherit; }
+.item-top { display: flex; justify-content: space-between; align-items: center; }
+.item-creditor { font-weight: 700; font-size: 15px; }
+.item-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.item-guidance { font-size: 13px; color: var(--ink); margin-top: 10px; line-height: 1.45; }
+.muted-card { color: var(--muted); font-size: 14px; }
+
+/* Badges */
+.badge {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 3px 8px; border-radius: 999px;
+}
+.badge.disputable { background: #fff2e2; color: #a5610a; }
+.badge.accurate { background: #eef7ed; color: #2f5c2b; }
+.badge.open, .badge.status-filed, .badge.status-investigating { background: #e8f0fe; color: #1e3a6d; }
+.badge.status-resolved { background: #eef7ed; color: #2f5c2b; }
+.badge.status-withdrawn { background: #f1f1f3; color: #6b7280; }
+
+.rights { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+.rights li { margin-bottom: 6px; }

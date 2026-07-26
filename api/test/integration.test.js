@@ -124,3 +124,71 @@ test('login round-trips and returns a session', async (t) => {
   const session = await res.json();
   assert.ok(session.accessToken && session.refreshToken);
 });
+
+async function registerMember() {
+  const email = uniqueEmail();
+  const reg = await post('/api/auth/register', {
+    name: 'Credit Test', email, password: 'a-strong-password',
+    consent: { terms: true, dataNeverSold: true },
+  });
+  return { email, ...(await reg.json()) };
+}
+const authed = (token) => ({ authorization: `Bearer ${token}` });
+
+test('credit: pull splits disputable/accurate, withholds score, disputes are member-initiated', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+
+  // Pull a report (mock bureau).
+  const pull = await fetch(`${base}/api/credit/pull`, { method: 'POST', headers: authed(accessToken) });
+  assert.equal(pull.status, 201);
+  assert.equal((await pull.json()).itemCount, 5);
+
+  // Overview: 3 disputable (mismatch, unrecognized, obsolete), 2 accurate.
+  const ov = await (await fetch(`${base}/api/credit`, { headers: authed(accessToken) })).json();
+  assert.equal(ov.disputable.length, 3);
+  assert.equal(ov.accurate.length, 2);
+
+  // Score is withheld before the first consultation is complete (spec §8).
+  assert.equal(ov.score.withheld, true);
+  assert.equal(JSON.stringify(ov.score).includes('612'), false);
+
+  // File a dispute on a disputable item (member-initiated click).
+  const target = ov.disputable[0];
+  const filed = await fetch(`${base}/api/credit/items/${target.id}/dispute`, {
+    method: 'POST', headers: { ...authed(accessToken), 'content-type': 'application/json' },
+    body: JSON.stringify({ method: 'online' }),
+  });
+  assert.equal(filed.status, 201);
+  const { dispute } = await filed.json();
+  assert.equal(dispute.status, 'filed');
+
+  // Filing again on the same item conflicts (one open dispute per item).
+  const again = await fetch(`${base}/api/credit/items/${target.id}/dispute`, {
+    method: 'POST', headers: { ...authed(accessToken), 'content-type': 'application/json' }, body: '{}',
+  });
+  assert.equal(again.status, 409);
+
+  // The dispute is traceable to the member in the audit log.
+  const { rows: audits } = await pool.query(
+    `SELECT actor_user_id FROM audit_log WHERE action = 'dispute.filed' AND entity_id = $1`,
+    [dispute.id],
+  );
+  assert.ok(audits[0] && audits[0].actor_user_id, 'dispute.filed must record the initiating member');
+
+  // Tracker lists it.
+  const tracker = await (await fetch(`${base}/api/credit/disputes`, { headers: authed(accessToken) })).json();
+  assert.ok(tracker.disputes.some((d) => d.id === dispute.id));
+});
+
+test('credit: an accurate item cannot be disputed', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+  await fetch(`${base}/api/credit/pull`, { method: 'POST', headers: authed(accessToken) });
+  const ov = await (await fetch(`${base}/api/credit`, { headers: authed(accessToken) })).json();
+
+  const accurate = ov.accurate[0];
+  const detail = await (await fetch(`${base}/api/credit/items/${accurate.id}`, { headers: authed(accessToken) })).json();
+  assert.equal(detail.canDispute, false);
+  assert.ok(detail.rights.length > 0); // FCRA rights always shown
+});

@@ -15,7 +15,8 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 |---|---|---|
 | **1 — Foundation** | Repo scaffold, full PostgreSQL schema, auth + roles + MFA, column encryption, audit log, API skeleton, CI | ✅ built |
 | **2 — Plan core** | Member signup/login, plan + six tracks, plan home screen, milestones, 90-day rule; mobile-first React app | ✅ built |
-| 3 — Credit engine | Rules engine, credit screens, member-initiated disputes | ⏳ next |
+| **3 — Credit engine** | Deterministic FCRA rules engine, credit screens, member-initiated disputes, dispute tracking, bureau adapter | ✅ built |
+| 4 — Money | Plaid, transactions, budget, savings, coaching, dispute tracker | ⏳ next |
 | 4–13 | Money, Team, Education, Marketplace, Ingestion, AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
@@ -90,6 +91,22 @@ openssl rand -base64 32     # ENCRYPTION_KEY (must decode to 32 bytes)
 The React app (`web/`) ships the first three member screens: **Create account** (with the
 explicit data-never-sold consent), **Sign in** (with MFA step), and **Plan home** (leads with
 the day count, shows the six tracks and the 90-day rule — no score).
+
+## Credit API (Phase 3)
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/credit/pull` | Ingest a report (bureau adapter), classify every item |
+| GET  | `/api/credit` | Items split disputable vs accurate; score withheld pre-consultation |
+| GET  | `/api/credit/items/:id` | Item finding + FCRA rights; nothing pre-selected |
+| POST | `/api/credit/items/:id/dispute` | **Member-initiated** dispute; initiator recorded |
+| POST | `/api/credit/disputes/:id/withdraw` | Withdraw an open dispute |
+| GET  | `/api/credit/disputes` | Dispute tracker (status + day count) |
+
+The **credit rules engine** (`api/src/credit/rulesEngine.js`) is deterministic and auditable —
+explicit FCRA/CROA rules, not an LLM. It classifies each item `disputable`/`accurate`, generates
+non-promissory guidance (run through the copy gate), and **never pre-selects or files a dispute**.
+Bureau access sits behind a swappable adapter (`api/src/integrations/creditBureau`).
 
 ### Running both tiers in dev
 
