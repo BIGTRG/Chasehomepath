@@ -11,6 +11,7 @@ import ingestionRoutes from './ingestion.routes.js';
 import agentRoutes from './agent.routes.js';
 import assistanceRoutes from './assistance.routes.js';
 import operatorRoutes from './operator.routes.js';
+import partnerRoutes from './partner.routes.js';
 
 const router = Router();
 
@@ -26,7 +27,8 @@ router.use('/ingest', ingestionRoutes);
 router.use('/agent', agentRoutes);
 router.use('/assistance', assistanceRoutes);
 router.use('/operator', operatorRoutes);
+router.use('/partner', partnerRoutes);
 
-// Later phases mount here: /partner (11), /onboarding (12), /home (13).
+// Later phases mount here: /onboarding (12), /home (13).
 
 export default router;

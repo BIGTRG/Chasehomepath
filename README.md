@@ -23,8 +23,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **8 — Ingestion** | MLS/RESO connector, normalization, dedup, quality gate, partner-route publishing + operator review | ✅ built |
 | **9 — AI agent** | Member agent over own file, deterministic rate/term/legal escalation, live program matching | ✅ built |
 | **10 — Operator console** | Roster, client detail, team capacity, ratings dashboard, inventory review, HQ user/program admin | ✅ built |
-| 11 — Partner portal | Certification flow, assigned clients, inventory publishing, compliance profile | ⏳ next |
-| 12–13 | Onboarding pipeline, Homeowner mode | ⏳ |
+| **11 — Partner portal** | Certification (e-sign + license verify), assigned clients, inventory publishing, compliance profile | ✅ built |
+| 12 — Workforce onboarding | Application→license→background→agreement→payroll→training→certification→provisioning | ⏳ next |
+| 13 | Homeowner mode | ⏳ |
 
 ## Layout
 

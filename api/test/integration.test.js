@@ -525,6 +525,47 @@ test('operator: roster scoping, client detail access, capacity, ratings, HQ admi
   assert.equal(forbidden.status, 403);
 });
 
+test('partner: certification flow with license verification gates go-live', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const partner = await createUserWithRole('partner', { certified: false });
+  const manager = await createUserWithRole('manager');
+  const pHeaders = { ...authed(partner.token), 'content-type': 'application/json' };
+
+  // Profile starts pending.
+  const prof0 = await (await fetch(`${base}/api/partner/profile`, { headers: authed(partner.token) })).json();
+  assert.equal(prof0.certificationStatus, 'pending');
+
+  // Partner submits certification (e-signs agreement + records license) -> in_review.
+  const submit = await fetch(`${base}/api/partner/certification`, {
+    method: 'POST', headers: pHeaders, body: JSON.stringify({ licenseType: 'nc_broker', licenseNumber: 'NC-12345' }),
+  });
+  assert.equal(submit.status, 201);
+  const prof1 = await (await fetch(`${base}/api/partner/profile`, { headers: authed(partner.token) })).json();
+  assert.equal(prof1.certificationStatus, 'in_review');
+  assert.equal(prof1.agreements.length, 1);
+
+  // Partner submits a listing — held pending; can't be approved while not certified.
+  const listing = await (await fetch(`${base}/api/partner/listings`, {
+    method: 'POST', headers: pHeaders, body: JSON.stringify({ type: 'house', price: 220000, address: '9 Birch', beds: 3, baths: 2, sqft: 1300 }),
+  })).json();
+  const blocked = await fetch(`${base}/api/ingest/listings/${listing.listing.id}/review`, {
+    method: 'POST', headers: { ...authed(manager.token), 'content-type': 'application/json' }, body: JSON.stringify({ decision: 'approve' }),
+  });
+  assert.equal(blocked.status, 403);
+
+  // Operator certifies the partner (license verification runs) -> certified.
+  const certify = await fetch(`${base}/api/partner/${partner.userId}/certify`, { method: 'POST', headers: authed(manager.token) });
+  assert.equal(certify.status, 200);
+  assert.equal((await certify.json()).partner.certification_status, 'certified');
+
+  // Now the listing can go live.
+  const approved = await fetch(`${base}/api/ingest/listings/${listing.listing.id}/review`, {
+    method: 'POST', headers: { ...authed(manager.token), 'content-type': 'application/json' }, body: JSON.stringify({ decision: 'approve' }),
+  });
+  assert.equal(approved.status, 200);
+  assert.equal((await approved.json()).listing.status, 'active');
+});
+
 test('agent: answers plan questions and escalates rate/term/legal', async (t) => {
   if (!dbUp) return t.skip('no database reachable');
   const { accessToken } = await registerMember();

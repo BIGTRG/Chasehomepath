@@ -168,3 +168,12 @@ export const ingest = {
   pending: () => api('/ingest/pending'),
   review: (id, decision) => api(`/ingest/listings/${id}/review`, { method: 'POST', body: { decision } }),
 };
+
+export const partner = {
+  profile: () => api('/partner/profile'),
+  clients: () => api('/partner/clients'),
+  listings: () => api('/partner/listings'),
+  publish: (body) => api('/partner/listings', { method: 'POST', body }),
+  certify: (licenseType, licenseNumber) =>
+    api('/partner/certification', { method: 'POST', body: { licenseType, licenseNumber } }),
+};

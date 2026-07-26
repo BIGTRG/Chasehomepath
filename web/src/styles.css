@@ -267,6 +267,9 @@ body {
 .op-actions { display: flex; gap: 8px; }
 .op-msg { font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--ink); }
 .rules { font-size: 11px; color: var(--muted); }
+.op-select { padding: 10px 12px; font-size: 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.publish-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.publish-form input { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; width: 120px; }
 
 @media (max-width: 720px) {
   .op-grid { grid-template-columns: 1fr; }

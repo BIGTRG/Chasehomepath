@@ -27,6 +27,9 @@ import TeamDash from './screens/operator/TeamDash.jsx';
 import Inventory from './screens/operator/Inventory.jsx';
 import Admin from './screens/operator/Admin.jsx';
 
+// Partner surface
+import PartnerHome from './screens/partner/PartnerHome.jsx';
+
 const OPERATOR_ROLES = ['specialist', 'manager', 'admin'];
 
 function MemberSurface() {
@@ -67,6 +70,15 @@ function OperatorSurface() {
   );
 }
 
+function PartnerSurface() {
+  return (
+    <Routes>
+      <Route path="/" element={<PartnerHome />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function AuthSurface() {
   return (
     <div className="app-shell">
@@ -85,7 +97,7 @@ function RoleRouter() {
   if (loading) return <div className="loading">Loading…</div>;
   if (!user) return <AuthSurface />;
   if (OPERATOR_ROLES.includes(user.role)) return <OperatorSurface />;
-  // partner surface arrives in Phase 11; partners fall through to the member-style shell for now.
+  if (user.role === 'partner') return <PartnerSurface />;
   return <MemberSurface />;
 }
 
