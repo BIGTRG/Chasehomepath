@@ -1,0 +1,9 @@
+{
+  "name": "@chase/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CHASE HomePath — mobile-first React web/PWA (built out from Phase 2). Placeholder for now.",
+  "scripts": {
+    "dev": "echo \"web app is scaffolded in Phase 2\" && exit 0"
+  }
+}

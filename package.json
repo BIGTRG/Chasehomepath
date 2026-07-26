@@ -1,0 +1,20 @@
+{
+  "name": "chase-homepath",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CHASE HomePath — vertically integrated homeownership platform. Ensuring the American Dream.",
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm --workspace api run dev",
+    "migrate": "npm --workspace api run migrate",
+    "test": "npm --workspace api run test",
+    "lint": "npm --workspace api run lint"
+  },
+  "license": "UNLICENSED"
+}

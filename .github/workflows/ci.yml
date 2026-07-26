@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    name: API — lint, migrate, test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: chase
+          POSTGRES_PASSWORD: chase
+          POSTGRES_DB: chase_homepath_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chase"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://chase:chase@localhost:5432/chase_homepath_test
+      PGSSLMODE: disable
+      JWT_ACCESS_SECRET: ci-access-secret-that-is-at-least-32-chars
+      JWT_REFRESH_SECRET: ci-refresh-secret-that-is-at-least-32-chars
+      # 32-byte base64 key for AES-256-GCM (CI only, not a real secret)
+      ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      ENCRYPTION_KEY_ACTIVE: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run migrations
+        run: npm run migrate
+
+      - name: Test
+        run: npm test
