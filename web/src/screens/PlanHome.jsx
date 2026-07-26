@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { plan as planApi } from '../api/client.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import TrackList from '../components/TrackList.jsx';
@@ -59,6 +60,13 @@ export default function PlanHome() {
       </div>
 
       <TrackList tracks={data.tracks} />
+
+      <Link to="/marketplace" className="card item-card">
+        <div className="item-top">
+          <span className="item-creditor">Explore the marketplace →</span>
+        </div>
+        <div className="item-meta">Homes, lots, and build plans — priced with your assistance.</div>
+      </Link>
 
       {/* Milestones */}
       {data.milestones.length > 0 && (

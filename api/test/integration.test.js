@@ -371,3 +371,36 @@ test('education: curriculum assigned, before unlocked, during/after locked; comp
   const blocked = await fetch(`${base}/api/learn/${locked.moduleId}/done`, { method: 'POST', headers: authed(accessToken) });
   assert.equal(blocked.status, 404);
 });
+
+test('marketplace: listings are source-labeled with est monthly; plan-to-lot returns all-in', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+
+  // Every listing carries its source and a friendly label (origin never hidden).
+  const { listings } = await (await fetch(`${base}/api/marketplace/listings`, { headers: authed(accessToken) })).json();
+  assert.ok(listings.length > 0);
+  for (const l of listings) {
+    assert.ok(['owned', 'optioned', 'partner', 'mls'].includes(l.source));
+    assert.ok(l.sourceLabel);
+  }
+  // Houses have an est monthly; lots don't.
+  const house = listings.find((l) => l.type === 'house');
+  const lot = listings.find((l) => l.type === 'lot');
+  assert.ok(house.estMonthly > 0);
+  assert.equal(lot.estMonthly, null);
+
+  // House-plan catalog.
+  const { plans } = await (await fetch(`${base}/api/marketplace/plans`, { headers: authed(accessToken) })).json();
+  assert.ok(plans.length >= 4);
+
+  // Plan-to-lot: pick the smallest plan and get fitting lots with an all-in number.
+  const smallPlan = plans[0];
+  const match = await (await fetch(`${base}/api/marketplace/plans/${smallPlan.id}/lots`, { headers: authed(accessToken) })).json();
+  assert.ok(Array.isArray(match.matches));
+  if (match.matches.length > 0) {
+    const m = match.matches[0];
+    assert.ok(m.allIn > m.lot.price); // all-in adds the build cost
+    assert.ok(m.estMonthly > 0);
+    assert.equal(m.fit.fits, true);
+  }
+});

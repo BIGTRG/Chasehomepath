@@ -15,6 +15,7 @@ export default [
         document: 'readonly',
         localStorage: 'readonly',
         fetch: 'readonly',
+        URLSearchParams: 'readonly',
         console: 'readonly',
         setTimeout: 'readonly',
         navigator: 'readonly',

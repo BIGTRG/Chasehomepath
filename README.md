@@ -19,8 +19,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **4 — Money** | Plaid adapter, transaction sync, budgets vs actual, savings goals, deterministic coaching, Money screen | ✅ built |
 | **5 — Team & comms** | Team assignment (onboarding-gated), in-app messaging, appointments, consultation→score unlock, ratings | ✅ built |
 | **6 — Education** | Curriculum, assignment-from-plan, data-driven lock/unlock, before/during/after, Learn screen | ✅ built |
-| 7 — Marketplace | Listings, house-plan catalog, lot-plan fit, per-member enrichment, source labeling | ⏳ next |
-| 8–13 | Ingestion, AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
+| **7 — Marketplace** | Listings (source-labeled), house-plan catalog, lot-plan fit, plan-to-lot all-in, per-member enrichment | ✅ built |
+| 8 — Ingestion | Partner-route publishing, MLS/RESO connector, normalization, dedup, quality gate | ⏳ next |
+| 9–13 | AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
 

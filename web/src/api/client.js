@@ -127,3 +127,12 @@ export const learn = {
   mine: () => api('/learn'),
   complete: (moduleId) => api(`/learn/${moduleId}/done`, { method: 'POST' }),
 };
+
+export const market = {
+  listings: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return api(`/marketplace/listings${q ? `?${q}` : ''}`);
+  },
+  plans: () => api('/marketplace/plans'),
+  planLots: (planId) => api(`/marketplace/plans/${planId}/lots`),
+};

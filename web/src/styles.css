@@ -217,3 +217,12 @@ body {
 .lock { font-size: 12px; }
 .btn.small { width: auto; padding: 8px 14px; font-size: 13px; }
 .bottom-nav.nav-5 .nav-label { font-size: 10px; }
+
+/* Segmented control + marketplace source badges */
+.seg { display: flex; gap: 6px; background: #eef0f3; border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+.seg-btn { flex: 1; border: none; background: transparent; padding: 9px 0; border-radius: 9px; font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; }
+.seg-btn.active { background: #fff; color: var(--navy); box-shadow: var(--shadow); }
+.badge.src-owned { background: #e8f0fe; color: #1e3a6d; }
+.badge.src-optioned { background: #eef7ed; color: #2f5c2b; }
+.badge.src-partner { background: #fff2e2; color: #a5610a; }
+.badge.src-mls { background: #f1eafb; color: #6b3fa0; }
