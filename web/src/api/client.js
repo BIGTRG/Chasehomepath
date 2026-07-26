@@ -106,3 +106,12 @@ export const credit = {
   withdraw: (id) => api(`/credit/disputes/${id}/withdraw`, { method: 'POST' }),
   disputes: () => api('/credit/disputes'),
 };
+
+export const money = {
+  overview: () => api('/money'),
+  link: (publicToken) => api('/money/link', { method: 'POST', body: { publicToken } }),
+  sync: () => api('/money/sync', { method: 'POST' }),
+  setBudget: (category, monthlyTarget) =>
+    api('/money/budgets', { method: 'PUT', body: { category, monthlyTarget } }),
+  saveGoal: (goal) => api('/money/savings', { method: 'PUT', body: goal }),
+};

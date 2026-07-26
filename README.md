@@ -16,8 +16,9 @@ is the source of truth; new ideas are parked in [`docs/backlog.md`](docs/backlog
 | **1 — Foundation** | Repo scaffold, full PostgreSQL schema, auth + roles + MFA, column encryption, audit log, API skeleton, CI | ✅ built |
 | **2 — Plan core** | Member signup/login, plan + six tracks, plan home screen, milestones, 90-day rule; mobile-first React app | ✅ built |
 | **3 — Credit engine** | Deterministic FCRA rules engine, credit screens, member-initiated disputes, dispute tracking, bureau adapter | ✅ built |
-| 4 — Money | Plaid, transactions, budget, savings, coaching, dispute tracker | ⏳ next |
-| 4–13 | Money, Team, Education, Marketplace, Ingestion, AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
+| **4 — Money** | Plaid adapter, transaction sync, budgets vs actual, savings goals, deterministic coaching, Money screen | ✅ built |
+| 5 — Team & comms | Team assignment, in-app messaging, scheduling, ratings | ⏳ next |
+| 6–13 | Education, Marketplace, Ingestion, AI agent, Operator console, Partner portal, Onboarding, Homeowner mode | ⏳ |
 
 ## Layout
 

@@ -192,3 +192,38 @@ test('credit: an accurate item cannot be disputed', async (t) => {
   assert.equal(detail.canDispute, false);
   assert.ok(detail.rights.length > 0); // FCRA rights always shown
 });
+
+test('money: link, sync, budgets, savings, and coaching', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const { accessToken } = await registerMember();
+  const jsonHeaders = { ...authed(accessToken), 'content-type': 'application/json' };
+
+  // Link a (mock) bank and sync transactions.
+  const linked = await fetch(`${base}/api/money/link`, {
+    method: 'POST', headers: jsonHeaders, body: JSON.stringify({ publicToken: 'public-mock' }),
+  });
+  assert.equal(linked.status, 201);
+
+  const synced = await (await fetch(`${base}/api/money/sync`, { method: 'POST', headers: authed(accessToken) })).json();
+  assert.ok(synced.inserted > 0);
+
+  // Syncing again inserts nothing (idempotent-ish dedupe).
+  const resync = await (await fetch(`${base}/api/money/sync`, { method: 'POST', headers: authed(accessToken) })).json();
+  assert.equal(resync.inserted, 0);
+
+  // Set a tight dining budget so coaching flags an overage (mock spends $355 on dining).
+  await fetch(`${base}/api/money/budgets`, {
+    method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ category: 'dining', monthlyTarget: 100 }),
+  });
+  // Create a savings goal.
+  await fetch(`${base}/api/money/savings`, {
+    method: 'PUT', headers: jsonHeaders, body: JSON.stringify({ label: 'Down payment', targetAmount: 10000, currentAmount: 1500 }),
+  });
+
+  const ov = await (await fetch(`${base}/api/money`, { headers: authed(accessToken) })).json();
+  assert.equal(ov.linked, true);
+  assert.ok(ov.month.income > 0 && ov.month.spend > 0);
+  assert.ok(ov.budgets.some((b) => b.category === 'dining' && b.actual > b.monthly_target));
+  assert.ok(ov.coaching.some((c) => c.type === 'over_budget'));
+  assert.ok(ov.savings.some((s) => s.label === 'Down payment'));
+});

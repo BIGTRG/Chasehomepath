@@ -183,3 +183,16 @@ body {
 
 .rights { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
 .rights li { margin-bottom: 6px; }
+
+/* Money */
+.money-row { display: flex; justify-content: space-between; text-align: center; }
+.stat { flex: 1; }
+.stat-val { font-size: 22px; font-weight: 800; color: var(--navy); }
+.stat-val.green { color: var(--green); }
+.stat-val.danger { color: var(--danger); }
+.stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.bar > span.over { background: var(--danger); }
+.coach { font-size: 14px; line-height: 1.45; border-left: 4px solid var(--line); }
+.coach-high { border-left-color: var(--danger); }
+.coach-medium { border-left-color: var(--orange); }
+.coach-low { border-left-color: var(--green); }
