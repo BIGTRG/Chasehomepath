@@ -44,8 +44,8 @@ export async function recordHomeownership(member, data, actor) {
     for (const task of DEFAULT_MAINTENANCE) {
       await db(
         `INSERT INTO maintenance_tasks (member_id, label, category, cadence_months, due_date)
-         VALUES ($1,$2,$3,$4, CURRENT_DATE + ($4 || ' months')::interval)`,
-        [member.id, task.label, task.category, task.cadenceMonths],
+         VALUES ($1,$2,$3,$4, (CURRENT_DATE + make_interval(months => $5))::date)`,
+        [member.id, task.label, task.category, task.cadenceMonths, task.cadenceMonths],
       );
     }
 
@@ -117,7 +117,7 @@ export async function completeMaintenance(member, taskId, actor) {
   const { rows } = await query(
     `UPDATE maintenance_tasks SET status = 'done', completed_at = now(),
             due_date = CASE WHEN cadence_months > 0
-                            THEN (CURRENT_DATE + (cadence_months || ' months')::interval)::date
+                            THEN (CURRENT_DATE + make_interval(months => cadence_months::int))::date
                             ELSE due_date END
       WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL
       RETURNING id, label, status, due_date`,
