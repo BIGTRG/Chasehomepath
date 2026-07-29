@@ -48,6 +48,11 @@ body {
 }
 .brand-mark { font-weight: 800; letter-spacing: -0.02em; font-size: 20px; }
 .brand-mark .path { color: var(--orange); }
+.brand-logo-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: 8px; padding: 4px 10px;
+}
+.brand-logo { height: 28px; width: auto; display: block; }
 .brand-tagline { font-size: 12px; opacity: 0.85; margin-left: auto; }
 
 /* Content */

@@ -9,7 +9,10 @@ export default function OperatorLayout() {
   return (
     <div className="op-shell">
       <aside className="op-side">
-        <div className="op-brand">Chase<span className="path">HomePath</span><div className="op-role">{user.role} console</div></div>
+        <div className="op-brand">
+          <span className="brand-logo-chip"><img src="/logo.png" alt="CHASE HomePath" className="brand-logo" /></span>
+          <div className="op-role">{user.role} console</div>
+        </div>
         <nav className="op-nav">
           <NavLink to="/" end>Clients</NavLink>
           <NavLink to="/team">Team</NavLink>
