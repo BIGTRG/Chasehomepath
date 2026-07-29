@@ -192,6 +192,13 @@ test('credit: an accurate item cannot be disputed', async (t) => {
   const detail = await (await fetch(`${base}/api/credit/items/${accurate.id}`, { headers: authed(accessToken) })).json();
   assert.equal(detail.canDispute, false);
   assert.ok(detail.rights.length > 0); // FCRA rights always shown
+
+  // Enforced server-side, not just in the UI: filing a dispute on an accurate item is 403.
+  const blocked = await fetch(`${base}/api/credit/items/${accurate.id}/dispute`, {
+    method: 'POST', headers: { ...authed(accessToken), 'content-type': 'application/json' },
+    body: JSON.stringify({ method: 'online' }),
+  });
+  assert.equal(blocked.status, 403);
 });
 
 test('money: link, sync, budgets, savings, and coaching', async (t) => {

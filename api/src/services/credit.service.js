@@ -1,5 +1,5 @@
 import { query, withTransaction } from '../db/pool.js';
-import { NotFoundError, ConflictError } from '../lib/errors.js';
+import { NotFoundError, ConflictError, ComplianceError } from '../lib/errors.js';
 import { encrypt } from '../lib/crypto.js';
 import { audit } from '../lib/audit.js';
 import { assertMemberInitiated, canRenderScore } from '../compliance/rules.js';
@@ -181,6 +181,15 @@ export async function fileDispute(member, itemId, { method = 'online', initiated
     );
     const item = itemRows[0];
     if (!item) throw new NotFoundError('Credit item not found');
+
+    // Accuracy-first (§8): an accurate item is never disputed to pad numbers.
+    // Enforced server-side, not just hidden in the UI.
+    if (item.classification !== 'disputable') {
+      throw new ComplianceError(
+        'This item is reported accurately and cannot be disputed. Paying it down is the honest path.',
+        'self_directed_credit_work',
+      );
+    }
 
     const { rows: open } = await db(
       `SELECT id FROM disputes
