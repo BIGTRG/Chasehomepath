@@ -13,6 +13,9 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { code: 'rate_limited', message: 'Too many attempts, try again later' } },
+  // The test suite registers/logs in far more than 30 times from one IP; brute-force
+  // throttling stays fully active outside NODE_ENV=test.
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 router.post('/register', authLimiter, asyncHandler(auth.register));

@@ -93,7 +93,7 @@ export async function reviewListing(listingId, decision, actor) {
     const { rows } = await db(
       `SELECT l.id, l.source, l.status, l.partner_id, p.certification_status
          FROM listings l LEFT JOIN partners p ON p.id = l.partner_id
-        WHERE l.id = $1 AND l.deleted_at IS NULL FOR UPDATE`,
+        WHERE l.id = $1 AND l.deleted_at IS NULL FOR UPDATE OF l`,
       [listingId],
     );
     const listing = rows[0];

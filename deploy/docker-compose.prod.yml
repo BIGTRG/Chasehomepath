@@ -1,0 +1,49 @@
+# CHASE HomePath — production stack (server #1)
+# Usage (from repo root on the server):
+#   docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+services:
+  db:
+    image: postgres:16
+    container_name: chase-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chase
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: chase_homepath
+    volumes:
+      - chase_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chase -d chase_homepath"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    container_name: chase-api
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGPORT: "5432"
+      DATABASE_URL: postgres://chase:${PGPASSWORD}@db:5432/chase_homepath
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    container_name: chase-web
+    restart: unless-stopped
+    ports:
+      - "8101:80"
+    depends_on:
+      - api
+
+volumes:
+  chase_pgdata:
