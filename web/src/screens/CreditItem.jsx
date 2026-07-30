@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { credit as creditApi } from '../api/client.js';
+import ScreenTop from '../components/ScreenTop.jsx';
 
-// Credit item detail (spec §4.9): the engine explains the finding + the member's FCRA
-// rights. Nothing is pre-selected. The member clicks to dispute. No outcome promises.
+// Walkthrough screen 8: the engine explains the rule and the rights — nothing
+// pre-selected. The member chooses and clicks submit. That's what keeps it DIY. (§4.9)
 export default function CreditItem() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -50,37 +51,38 @@ export default function CreditItem() {
 
   const { item, rights, hasOpenDispute, canDispute, disputes } = data;
   const openDispute = disputes.find((d) => ['draft', 'filed', 'investigating'].includes(d.status));
+  const typeLabel = String(item.type || '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
   return (
     <div className="content">
-      <button className="btn secondary back" onClick={() => navigate('/credit')}>← Credit</button>
-      <h1 className="h1">{item.creditor}</h1>
-      <div className="item-meta">
-        {item.type} · reported ${Number(item.balance ?? 0).toLocaleString()}
+      <ScreenTop
+        title={item.creditor}
+        sub={`${typeLabel} · $${Number(item.balance ?? 0).toLocaleString()}`}
+      />
+
+      <div className="detail-lbl">What we found</div>
+      <p className="detail-p">
+        {item.guidance_text}
         {item.member_recorded_balance != null && (
-          <> · you recorded ${Number(item.member_recorded_balance).toLocaleString()}</>
+          <> The balance reported is ${Number(item.balance ?? 0).toLocaleString()}. Your records
+          show ${Number(item.member_recorded_balance).toLocaleString()}.</>
         )}
-      </div>
-      <span className={`badge ${item.classification}`} style={{ marginTop: 10, display: 'inline-block' }}>
-        {item.classification}
-      </span>
+      </p>
 
-      <div className="card">
-        <div className="h2" style={{ marginTop: 0 }}>What the engine found</div>
-        <p style={{ margin: 0 }}>{item.guidance_text}</p>
-      </div>
+      <div className="detail-lbl">Your right</div>
+      <ul className="rights">
+        {rights.map((r, i) => <li key={i}>{r}</li>)}
+      </ul>
 
-      <div className="card">
-        <div className="h2" style={{ marginTop: 0 }}>Your rights</div>
-        <ul className="rights">
-          {rights.map((r, i) => <li key={i}>{r}</li>)}
-        </ul>
+      <div className="gy" style={{ marginTop: 16 }}>
+        This is your decision. We've shown you what we found and your rights — you choose
+        whether to dispute. We don't promise an outcome.
       </div>
 
       {canDispute ? (
         hasOpenDispute ? (
           <div className="card">
-            <p style={{ marginTop: 0 }}>
+            <p style={{ marginTop: 0, fontSize: 14 }}>
               You filed a dispute on this item{openDispute ? ` (day ${openDispute.day_count})` : ''}. It's in progress.
             </p>
             <button className="btn secondary" onClick={() => withdraw(openDispute.id)} disabled={busy}>
@@ -89,7 +91,7 @@ export default function CreditItem() {
           </div>
         ) : (
           <button className="btn" onClick={fileDispute} disabled={busy}>
-            {busy ? 'Filing…' : 'Dispute this item'}
+            {busy ? 'Filing…' : 'I want to dispute this'}
           </button>
         )
       ) : (
@@ -97,6 +99,10 @@ export default function CreditItem() {
           This item looks accurate, so a dispute isn't the right tool. Talk with your specialist about the options above.
         </div>
       )}
+
+      <button className="btn secondary" onClick={() => navigate('/credit')}>
+        Not now — back to credit
+      </button>
     </div>
   );
 }

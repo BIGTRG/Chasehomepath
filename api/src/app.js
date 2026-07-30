@@ -24,6 +24,8 @@ export function createApp() {
       credentials: true,
     }),
   );
+  // Camera-captured document uploads arrive as base64 JSON (8 MB file cap → ~11 MB encoded).
+  app.use('/api/intake/documents', express.json({ limit: '12mb' }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 

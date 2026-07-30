@@ -30,6 +30,9 @@ services:
       PGHOST: db
       PGPORT: "5432"
       DATABASE_URL: postgres://chase:${PGPASSWORD}@db:5432/chase_homepath
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - chase_uploads:/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -47,3 +50,4 @@ services:
 
 volumes:
   chase_pgdata:
+  chase_uploads:

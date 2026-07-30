@@ -137,6 +137,15 @@ export const market = {
   planLots: (planId) => api(`/marketplace/plans/${planId}/lots`),
 };
 
+export const intake = {
+  mine: () => api('/intake'),
+  save: (body) => api('/intake', { method: 'POST', body }),
+  checklist: () => api('/intake/checklist'),
+  uploadDocument: (body) => api('/intake/documents', { method: 'POST', body }),
+  slots: () => api('/intake/slots'),
+  book: (body) => api('/intake/appointments', { method: 'POST', body }),
+};
+
 export const agent = {
   ask: (question) => api('/agent/ask', { method: 'POST', body: { question } }),
 };

@@ -1,11 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import ScreenTop from '../components/ScreenTop.jsx';
 import { agent as agentApi } from '../api/client.js';
 
-// AI agent (spec §4.10): chat over the member's own file. Rate/term/legal questions
-// escalate to a licensed human — the agent says it can't answer and offers to connect.
+// Walkthrough screen 9: 24/7, answers about the member's own file — and escalates
+// anything licensed (rates, terms) to a human. (spec §4.10)
 export default function Agent() {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     { from: 'agent', text: "Hi! Ask me anything about your plan, credit, money, or learning. For rates, loan terms, or legal questions I'll connect you with your team." },
   ]);
@@ -34,10 +33,13 @@ export default function Agent() {
 
   return (
     <div className="content">
-      <button className="btn secondary back" onClick={() => navigate('/')}>← Plan</button>
-      <h1 className="h1">Ask CHASE</h1>
+      <ScreenTop
+        title="HomePath agent"
+        sub={<span style={{ color: 'var(--green)' }}>Always on</span>}
+        right={<span className="av" aria-hidden>⌂</span>}
+      />
 
-      <div className="card thread" style={{ maxHeight: 420 }}>
+      <div className="thread" style={{ maxHeight: 440, marginBottom: 4 }}>
         {messages.map((m, i) => (
           <div key={i} className={`bubble ${m.from === 'me' ? 'mine' : 'theirs'} ${m.escalated ? 'escalated' : ''}`}>
             {m.text}

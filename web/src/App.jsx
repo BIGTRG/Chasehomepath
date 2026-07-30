@@ -1,12 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx';
-import BrandHeader from './components/BrandHeader.jsx';
 import MemberLayout from './components/MemberLayout.jsx';
 import OperatorLayout from './components/OperatorLayout.jsx';
 
 // Auth
 import Login from './screens/Login.jsx';
 import Register from './screens/Register.jsx';
+import Discover from './screens/Discover.jsx';
+
+// Intake funnel (walkthrough 2-5)
+import Qualify from './screens/Qualify.jsx';
+import Received from './screens/Received.jsx';
+import Schedule from './screens/Schedule.jsx';
+import Prep from './screens/Prep.jsx';
 
 // Member surface
 import PlanHome from './screens/PlanHome.jsx';
@@ -37,8 +43,12 @@ const OPERATOR_ROLES = ['specialist', 'manager', 'admin'];
 function MemberSurface() {
   return (
     <div className="app-shell">
-      <BrandHeader />
       <Routes>
+        {/* Intake funnel — no tab bar until the plan exists (walkthrough 2-5) */}
+        <Route path="/qualify" element={<Qualify />} />
+        <Route path="/received" element={<Received />} />
+        <Route path="/schedule" element={<Schedule />} />
+        <Route path="/prep" element={<Prep />} />
         <Route element={<MemberLayout />}>
           <Route path="/" element={<PlanHome />} />
           <Route path="/credit" element={<Credit />} />
@@ -86,10 +96,10 @@ function PartnerSurface() {
 function AuthSurface() {
   return (
     <div className="app-shell">
-      <BrandHeader />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/discover" element={<Discover />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { home as homeApi } from '../api/client.js';
+import ScreenTop from '../components/ScreenTop.jsx';
 
 const usd = (n) => `$${Number(n ?? 0).toLocaleString()}`;
 
@@ -45,11 +46,15 @@ export default function Homeowner() {
 
   if (!data.isHomeowner) {
     return (
-      <div className="content">
-        <button className="btn secondary back" onClick={() => navigate('/')}>← Plan</button>
-        <h1 className="h1">Homeowner mode</h1>
-        <p className="sub">Closed on your home? Record it to unlock maintenance, escrow tracking, and more.</p>
-        <div className="card">
+      <div className="content ctr">
+        <div className="big-emoji" aria-hidden>🏠</div>
+        <h1 className="h1">You're a homeowner</h1>
+        <p className="p">
+          You started on day one not sure it was possible. Look what you did. Record your
+          closing below and keep going with HomePath — maintenance, taxes, value tracking,
+          refinance alerts.
+        </p>
+        <div className="card" style={{ textAlign: 'left' }}>
           <form onSubmit={record}>
             <div className="field"><label>Address</label><input value={form.address} onChange={set('address')} /></div>
             <div className="field"><label>Purchase price</label><input type="number" value={form.purchasePrice} onChange={set('purchasePrice')} required /></div>
@@ -58,6 +63,7 @@ export default function Homeowner() {
             <div className="field"><label>Monthly taxes</label><input type="number" value={form.monthlyTaxes} onChange={set('monthlyTaxes')} /></div>
             <div className="field"><label>Monthly insurance</label><input type="number" value={form.monthlyInsurance} onChange={set('monthlyInsurance')} /></div>
             <button className="btn" type="submit">Enter homeowner mode</button>
+            <button className="btn secondary" type="button" onClick={() => navigate('/')}>← Back to your plan</button>
           </form>
         </div>
       </div>
@@ -69,27 +75,23 @@ export default function Homeowner() {
   return (
     <div className="content">
       <button className="btn secondary back" onClick={() => navigate('/')}>← Plan</button>
-      <h1 className="h1">Your home</h1>
-      <p className="sub">{h.address}</p>
+      <ScreenTop title="Your home" sub={h.address} />
 
-      <div className="card daycount">
-        <div className="num" style={{ fontSize: 40 }}>{usd(value.estimated)}</div>
-        <div className="label">Estimated value</div>
-        {value.equityEstimate != null && <div className="target">Est. equity {usd(value.equityEstimate)}</div>}
-        <div className="target" style={{ fontSize: 11, opacity: 0.7 }}>{value.note}</div>
+      <div className="mrow">
+        <div className="m"><div className="ml">Estimated value</div><div className="mv g">{usd(value.estimated)}</div></div>
+        <div className="m"><div className="ml">Est. equity</div><div className="mv">{value.equityEstimate != null ? usd(value.equityEstimate) : '—'}</div></div>
+      </div>
+      <div className="gy">{value.note}</div>
+
+      {refiAlert && <div className="note">{refiAlert.message}</div>}
+
+      <div className="mrow" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="m"><div className="ml">Taxes/mo</div><div className="mv" style={{ fontSize: 17 }}>{usd(housing.monthlyTaxes)}</div></div>
+        <div className="m"><div className="ml">Insurance/mo</div><div className="mv" style={{ fontSize: 17 }}>{usd(housing.monthlyInsurance)}</div></div>
+        <div className="m"><div className="ml">Balance</div><div className="mv" style={{ fontSize: 17 }}>{usd(h.mortgageBalance)}</div></div>
       </div>
 
-      {refiAlert && (
-        <div className="rule-banner"><span className="dot" /><span>{refiAlert.message}</span></div>
-      )}
-
-      <div className="card money-row">
-        <div className="stat"><div className="stat-val">{usd(housing.monthlyTaxes)}</div><div className="stat-label">Taxes/mo</div></div>
-        <div className="stat"><div className="stat-val">{usd(housing.monthlyInsurance)}</div><div className="stat-label">Insurance/mo</div></div>
-        <div className="stat"><div className="stat-val">{usd(h.mortgageBalance)}</div><div className="stat-label">Balance</div></div>
-      </div>
-
-      <div className="h2">Maintenance</div>
+      <div className="lbl">Maintenance</div>
       {maintenance.map((t) => (
         <div className="card milestone" key={t.id} style={{ borderTop: 'none' }}>
           <button className={`check ${t.status === 'done' ? 'done' : ''}`} onClick={() => completeTask(t.id)} aria-label="Mark done">

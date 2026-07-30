@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { market, assistance as assistanceApi } from '../api/client.js';
+import ScreenTop from '../components/ScreenTop.jsx';
 
 const usd = (n) => `$${Number(n ?? 0).toLocaleString()}`;
 const TABS = [
@@ -9,8 +10,15 @@ const TABS = [
   { key: 'plans', label: 'Build' },
 ];
 
-// Marketplace (spec §4.14): houses/lots/plans, SOURCE-LABELED, priced with the member's
-// assistance applied. Every listing shows where it came from.
+const SRC = {
+  owned: { cls: 'own', label: 'CHASE owned' },
+  optioned: { cls: 'own', label: 'CHASE optioned' },
+  partner: { cls: 'ptr', label: 'Partner' },
+  mls: { cls: 'mls', label: 'MLS' },
+};
+
+// Walkthrough screen 13: member-only inventory, source-labeled, priced with the
+// member's assistance stack applied. (spec §4.14)
 export default function Marketplace() {
   const [tab, setTab] = useState('house');
   const [listings, setListings] = useState(null);
@@ -34,16 +42,12 @@ export default function Marketplace() {
 
   return (
     <div className="content">
-      <h1 className="h1">Marketplace</h1>
-      <p className="sub">Homes, lots, and build plans — priced with your assistance applied.</p>
+      <ScreenTop title="Marketplace" sub="Matched to your plan" />
 
       {assist && assist.total > 0 && (
-        <div className="rule-banner ready" style={{ marginBottom: 16 }}>
-          <span className="dot" />
-          <span>
-            You may qualify for about <strong>{usd(assist.total)}</strong> across {assist.eligible.length} assistance
-            program{assist.eligible.length === 1 ? '' : 's'} — already applied to the estimates below.
-          </span>
+        <div className="note">
+          You may qualify for about <strong>{usd(assist.total)}</strong> across {assist.eligible.length} assistance
+          program{assist.eligible.length === 1 ? '' : 's'} — already applied to the estimates below.
         </div>
       )}
 
@@ -63,29 +67,36 @@ export default function Marketplace() {
           <Link key={p.id} to={`/marketplace/plans/${p.id}`} className="card item-card">
             <div className="item-top">
               <span className="item-creditor">{p.name}</span>
-              <span className="badge accurate">{p.sqft} sqft</span>
+              <span className="pill n">{p.sqft} sq ft</span>
             </div>
             <div className="item-meta">{p.beds} bd · {p.baths} ba · build {usd(p.estBuildLow)}–{usd(p.estBuildHigh)}</div>
-            <div className="item-guidance">See fitting lots and the all-in cost →</div>
+            <div className="link-orange" style={{ display: 'inline-block', marginTop: 8, fontSize: 13 }}>
+              See every lot it fits — all-in ›
+            </div>
           </Link>
         ))
       ) : (
         !listings ? <div className="loading">Loading…</div> :
         listings.length === 0 ? <div className="card muted-card">No listings here yet.</div> :
-        listings.map((l) => (
-          <div key={l.id} className="card">
-            <div className="item-top">
-              <span className="item-creditor">{usd(l.price)}</span>
-              <span className={`badge src-${l.source}`}>{l.sourceLabel}</span>
+        listings.map((l) => {
+          const src = SRC[l.source] || { cls: 'mls', label: l.sourceLabel };
+          return (
+            <div key={l.id} className="card">
+              <div className={`thumb ${l.type === 'lot' ? 'l' : ''}`}>
+                <span className="tbadge fit">Fits your plan</span>
+              </div>
+              <span className={`src ${src.cls}`}>{src.label}</span>
+              <div className="item-creditor">{l.address}</div>
+              <div className="item-meta">
+                {l.type === 'house'
+                  ? `${l.beds} bd · ${l.baths} ba · ${l.sqft} sq ft`
+                  : `${(l.sqft / 43560).toFixed(2)} ac lot`}
+              </div>
+              <div className="price">{usd(l.price)}</div>
+              {l.estMonthly && <div className="est">Est. {usd(l.estMonthly)}/mo with your assistance</div>}
             </div>
-            <div className="item-meta">{l.address}</div>
-            <div className="item-meta">
-              {l.type === 'house'
-                ? `${l.beds} bd · ${l.baths} ba · ${l.sqft} sqft${l.estMonthly ? ` · ~${usd(l.estMonthly)}/mo est.` : ''}`
-                : `${l.sqft} sqft lot`}
-            </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );

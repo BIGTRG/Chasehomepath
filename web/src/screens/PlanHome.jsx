@@ -2,12 +2,32 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { plan as planApi } from '../api/client.js';
 import { useAuth } from '../auth/AuthContext.jsx';
-import TrackList from '../components/TrackList.jsx';
+import ScreenTop from '../components/ScreenTop.jsx';
 
-// Plan home (spec §4.7): leads with the DAY COUNT, not a score. Six-track progress.
-// The 90-day minimum rule is shown visibly. No credit score appears here.
+// Walkthrough screen 6: leads with the day count, not a score. Track cards with
+// status pills; the 90-day rule sits in the orange note. (spec §4.7, §8)
+
+const TRACK_META = {
+  credit: { bar: '', label: 'Credit' },
+  budget: { bar: 'w', label: 'Budget' },
+  savings: { bar: 'b', label: 'Savings' },
+  education: { bar: 'g', label: 'Education' },
+  readiness: { bar: 'g', label: 'Readiness' },
+  timeline: { bar: 'b', label: 'Timeline' },
+};
+
+const fmtDate = (d) =>
+  new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// No name column server-side (privacy by design) — derive initials from the email
+// local part: "marcus.t@…" → MT.
+const initials = (email) => {
+  const parts = String(email || '').split('@')[0].split(/[._\-+]/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : (parts[0] || 'ME').slice(0, 2)).toUpperCase();
+};
+
 export default function PlanHome() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -34,74 +54,85 @@ export default function PlanHome() {
   if (!data) return <div className="loading">Loading your plan…</div>;
 
   const { placement } = data;
+  const totalDays = data.targetDate
+    ? Math.max(1, Math.round((new Date(data.targetDate) - new Date(new Date() - data.planDay * 86400000)) / 86400000))
+    : 180;
 
   return (
     <div className="content">
-      <h1 className="h1">Your plan</h1>
-      <p className="sub">Every day moves you closer to owning a home.</p>
+      <ScreenTop
+        title="Your plan"
+        sub={data.targetDate ? `Target: ${fmtDate(data.targetDate)}` : 'Your path to the keys'}
+        right={<span className="av">{initials(user?.email)}</span>}
+      />
 
-      {/* Day count leads */}
-      <div className="card daycount">
-        <div className="num">{data.planDay}</div>
-        <div className="label">Day of your plan</div>
-        {data.targetDate && (
-          <div className="target">Target move-in: {new Date(data.targetDate).toLocaleDateString()}</div>
-        )}
+      {/* Segmented progress strip — one segment per track */}
+      <div className="steps">
+        {data.tracks.map((t) => (
+          <b key={t.track_type} className={t.progress_pct >= 100 ? 'on' : t.progress_pct > 0 ? 'cur' : ''} />
+        ))}
       </div>
 
-      {/* 90-day rule, visible */}
-      <div className={`rule-banner ${placement.eligible ? 'ready' : ''}`}>
-        <span className="dot" />
-        <span>
-          {placement.eligible
-            ? `You've passed the ${placement.minDay}-day minimum and can be considered for placement.`
-            : `Placement readiness opens at day ${placement.minDay}. ${placement.daysRemaining} day${placement.daysRemaining === 1 ? '' : 's'} to go.`}
-        </span>
+      {/* Day count + 90-day rule, in the orange note (walkthrough copy) */}
+      <div className="note">
+        {placement.eligible
+          ? `Day ${data.planDay} of ${totalDays}. You've passed the ${placement.minDay}-day minimum — you can be considered for placement.`
+          : `Day ${data.planDay} of ${totalDays}. Nothing gets placed before day ${placement.minDay} — that time is doing real work on your file.`}
       </div>
 
-      <TrackList tracks={data.tracks} />
+      {/* Track cards */}
+      {data.tracks.map((t) => {
+        const meta = TRACK_META[t.track_type] || { bar: '', label: t.track_type };
+        const blocked = t.status === 'blocked';
+        return (
+          <Link key={t.track_type} to={trackLink(t.track_type)} className="card track-card">
+            <div className="track-top">
+              <span className="track-name">{meta.label}</span>
+              <span className={`pill ${blocked ? 'w' : 'g'}`}>{blocked ? 'Look' : t.status === 'complete' ? 'Done' : 'On track'}</span>
+            </div>
+            <div className="track-sub">{t.progress_pct}% · {t.status.replace('_', ' ')}</div>
+            <div className="bar"><span className={meta.bar} style={{ width: `${t.progress_pct}%` }} /></div>
+          </Link>
+        );
+      })}
 
       <Link to="/marketplace" className="card item-card">
-        <div className="item-top">
-          <span className="item-creditor">Explore the marketplace →</span>
-        </div>
+        <div className="item-top"><span className="item-creditor">Explore the marketplace</span><span className="chev">›</span></div>
         <div className="item-meta">Homes, lots, and build plans — priced with your assistance.</div>
       </Link>
 
       <Link to="/agent" className="card item-card">
-        <div className="item-top">
-          <span className="item-creditor">Ask CHASE →</span>
-        </div>
-        <div className="item-meta">Questions about your plan, credit, or money? Ask anytime.</div>
+        <div className="item-top"><span className="item-creditor">HomePath agent</span><span className="chev">›</span></div>
+        <div className="item-meta">Always on. Questions about your plan, credit, or money — ask anytime.</div>
       </Link>
 
       {data.status === 'completed' && (
-        <Link to="/home" className="card item-card">
-          <div className="item-top">
-            <span className="item-creditor">Homeowner mode →</span>
-          </div>
+        <Link to="/home" className="card item-card gl">
+          <div className="item-top"><span className="item-creditor">Homeowner mode</span><span className="chev">›</span></div>
           <div className="item-meta">Maintenance, escrow &amp; taxes, value, and refi alerts.</div>
         </Link>
       )}
 
       {/* Milestones */}
       {data.milestones.length > 0 && (
-        <div className="card">
-          <div className="h2" style={{ marginTop: 0 }}>Milestones</div>
-          {data.milestones.map((m) => (
-            <div className="milestone" key={m.id}>
-              <button
-                className={`check ${m.completed_at ? 'done' : ''}`}
-                onClick={() => toggleMilestone(m)}
-                aria-label={m.completed_at ? 'Mark incomplete' : 'Mark complete'}
-              >
-                {m.completed_at ? '✓' : ''}
-              </button>
-              <span className="ms-label">{m.label}</span>
-              {m.due_day != null && <span className="ms-day">Day {m.due_day}</span>}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="lbl">Milestones</div>
+          <div className="card">
+            {data.milestones.map((m) => (
+              <div className="milestone" key={m.id}>
+                <button
+                  className={`check ${m.completed_at ? 'done' : ''}`}
+                  onClick={() => toggleMilestone(m)}
+                  aria-label={m.completed_at ? 'Mark incomplete' : 'Mark complete'}
+                >
+                  {m.completed_at ? '✓' : ''}
+                </button>
+                <span className="ms-label">{m.label}</span>
+                {m.due_day != null && <span className="ms-day">Day {m.due_day}</span>}
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <button className="btn secondary" onClick={logout} style={{ marginTop: 8 }}>
@@ -109,4 +140,11 @@ export default function PlanHome() {
       </button>
     </div>
   );
+}
+
+function trackLink(type) {
+  if (type === 'credit') return '/credit';
+  if (type === 'budget' || type === 'savings') return '/money';
+  if (type === 'education') return '/learn';
+  return '/';
 }

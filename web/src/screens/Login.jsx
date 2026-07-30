@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
+// Walkthrough screen A: logo-led, warm, mobile-first. The American Dream line anchors it.
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -32,9 +33,9 @@ export default function Login() {
   }
 
   return (
-    <div className="content">
-      <h1 className="h1">Welcome back</h1>
-      <p className="sub">Sign in to continue your plan.</p>
+    <div className="content auth-top">
+      <img src="/logo.png" alt="CHASE HomePath" className="auth-logo" />
+      <p className="auth-tagline">Ensuring the American Dream</p>
 
       {error && <div className="error">{error}</div>}
 
@@ -63,8 +64,16 @@ export default function Login() {
         </button>
       </form>
 
+      <p className="link-line">
+        <a href="mailto:support@chasehomepath.com?subject=Password%20help">Forgot password?</a>
+      </p>
+
       <p className="center-link">
-        New here? <Link to="/register">Create an account</Link>
+        New here? <Link to="/register">Create your account</Link>
+      </p>
+
+      <p className="center-link" style={{ marginTop: 22 }}>
+        <Link to="/discover">See how CHASE HomePath works →</Link>
       </p>
     </div>
   );

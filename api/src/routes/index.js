@@ -14,6 +14,7 @@ import operatorRoutes from './operator.routes.js';
 import partnerRoutes from './partner.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import homeownerRoutes from './homeowner.routes.js';
+import intakeRoutes from './intake.routes.js';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ router.use('/operator', operatorRoutes);
 router.use('/partner', partnerRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/home', homeownerRoutes);
+router.use('/intake', intakeRoutes);
 
 // All 13 phases mounted. Later work extends these.
 

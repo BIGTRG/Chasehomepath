@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { money as moneyApi } from '../api/client.js';
+import { money as moneyApi, credit as creditApi } from '../api/client.js';
+import ScreenTop from '../components/ScreenTop.jsx';
 
 const usd = (n) => `$${Number(n ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-// Money (spec §4.11): Plaid-linked spend/save view, specific coaching, dispute tracker link.
+// Walkthrough screen 10: Plaid-linked, so coaching is specific. Spent/Saved metrics,
+// budget bars, orange coaching note, disputes tracked below. (spec §4.11)
 export default function Money() {
   const [data, setData] = useState(null);
+  const [disputes, setDisputes] = useState([]);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function load() {
     try {
       setData(await moneyApi.overview());
+      const d = await creditApi.disputes();
+      setDisputes(d.disputes);
     } catch (err) {
       setError(err.message);
     }
@@ -37,13 +41,20 @@ export default function Money() {
   if (error) return <div className="content"><div className="error">{error}</div></div>;
   if (!data) return <div className="loading">Loading…</div>;
 
+  const savedToHome = data.savings?.reduce((s, g) => s + Number(g.current_amount || 0), 0) ?? 0;
+  const openDisputes = disputes.filter((d) => ['draft', 'filed', 'investigating'].includes(d.status));
+  const doneDisputes = disputes.filter((d) => ['resolved'].includes(d.status));
+
   return (
     <div className="content">
-      <h1 className="h1">Money</h1>
+      <ScreenTop
+        title="Your money"
+        right={data.linked ? <span className="pill g">Bank linked</span> : <span className="pill n">Not linked</span>}
+      />
 
       {!data.linked ? (
         <div className="card">
-          <p style={{ marginTop: 0 }}>
+          <p style={{ marginTop: 0, fontSize: 14, lineHeight: 1.55 }}>
             Link your bank to see spending, set budgets, and get specific coaching. Your
             connection is encrypted and your data is never sold.
           </p>
@@ -53,69 +64,85 @@ export default function Money() {
         </div>
       ) : (
         <>
-          <div className="card money-row">
-            <Stat label="Income" value={usd(data.month.income)} />
-            <Stat label="Spent" value={usd(data.month.spend)} />
-            <Stat label="Net" value={usd(data.month.net)} accent={data.month.net >= 0 ? 'green' : 'danger'} />
+          <div className="mrow">
+            <div className="m">
+              <div className="ml">Spent</div>
+              <div className="mv">{usd(data.month.spend)}</div>
+            </div>
+            <div className="m">
+              <div className="ml">Saved to home</div>
+              <div className="mv g">{usd(savedToHome)}</div>
+            </div>
           </div>
 
-          {data.coaching.length > 0 && (
-            <>
-              <div className="h2">Coaching</div>
-              {data.coaching.map((c, i) => (
-                <div className={`card coach coach-${c.severity}`} key={i}>{c.message}</div>
-              ))}
-            </>
+          {data.budgets.length > 0 && (
+            <div className="card">
+              {data.budgets.map((b) => {
+                const pct = Math.min(100, Math.round((b.actual / Math.max(1, b.monthly_target)) * 100));
+                const over = b.actual > b.monthly_target;
+                return (
+                  <div key={b.id} style={{ marginBottom: 12 }}>
+                    <div className="brow">
+                      <span className="bl">{b.category}</span>
+                      <span className={`bv ${over ? 'over' : ''}`}>
+                        {usd(b.actual)}{over ? ' · over' : ''}
+                      </span>
+                    </div>
+                    <div className="bar"><span className={over ? 'w' : 'b'} style={{ width: `${pct}%` }} /></div>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
-          <div className="h2">Budgets</div>
-          {data.budgets.length === 0 && <div className="card muted-card">No budgets set yet.</div>}
-          {data.budgets.map((b) => {
-            const pct = Math.min(100, Math.round((b.actual / Math.max(1, b.monthly_target)) * 100));
-            const over = b.actual > b.monthly_target;
-            return (
-              <div className="card" key={b.id}>
-                <div className="track-top">
-                  <span className="track-name">{b.category}</span>
-                  <span className="track-pct">{usd(b.actual)} / {usd(b.monthly_target)}</span>
-                </div>
-                <div className="bar"><span className={over ? 'over' : ''} style={{ width: `${pct}%` }} /></div>
-              </div>
-            );
-          })}
+          {data.coaching.map((c, i) => (
+            <div className="note" key={i}>{c.message}</div>
+          ))}
 
-          <div className="h2">Savings goals</div>
-          {data.savings.length === 0 && <div className="card muted-card">No savings goals yet.</div>}
-          {data.savings.map((g) => {
-            const pct = Math.min(100, Math.round((g.current_amount / Math.max(1, g.target_amount)) * 100));
-            return (
-              <div className="card" key={g.id}>
-                <div className="track-top">
-                  <span className="track-name">{g.label}</span>
-                  <span className="track-pct">{usd(g.current_amount)} / {usd(g.target_amount)} · {pct}%</span>
-                </div>
-                <div className="bar"><span style={{ width: `${pct}%` }} /></div>
-              </div>
-            );
-          })}
+          {data.savings.length > 0 && (
+            <>
+              <div className="lbl">Savings goals</div>
+              {data.savings.map((g) => {
+                const pct = Math.min(100, Math.round((g.current_amount / Math.max(1, g.target_amount)) * 100));
+                return (
+                  <div className="card" key={g.id}>
+                    <div className="brow">
+                      <span className="bl">{g.label}</span>
+                      <span className="bv">{usd(g.current_amount)} of {usd(g.target_amount)}</span>
+                    </div>
+                    <div className="bar"><span className="b" style={{ width: `${pct}%` }} /></div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </>
       )}
 
-      <Link to="/disputes" className="card item-card">
-        <div className="item-top">
-          <span className="item-creditor">Dispute tracker →</span>
+      <div className="lbl">Disputes in progress</div>
+      {disputes.length === 0 && <div className="card muted-card">No disputes yet. You start them from a credit item.</div>}
+      {openDisputes.map((d) => (
+        <div className="card" key={d.id}>
+          <div className="item-top">
+            <div>
+              <div className="item-creditor">{d.creditor}</div>
+              <div className="item-meta">Day {d.day_count} of 30</div>
+            </div>
+            <span className="pill o">Open</span>
+          </div>
         </div>
-        <div className="item-meta">Track credit disputes you've started.</div>
-      </Link>
-    </div>
-  );
-}
-
-function Stat({ label, value, accent }) {
-  return (
-    <div className="stat">
-      <div className={`stat-val ${accent || ''}`}>{value}</div>
-      <div className="stat-label">{label}</div>
+      ))}
+      {doneDisputes.map((d) => (
+        <div className="card gl" key={d.id}>
+          <div className="item-top">
+            <div>
+              <div className="item-creditor">{d.creditor}</div>
+              <div className="item-meta">Resolved</div>
+            </div>
+            <span className="pill g">Done</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
