@@ -387,3 +387,4 @@ body {
 .legal-lede { background: #fdf1e0; border-radius: 12px; padding: 12px 14px; }
 .legal-foot { margin: 30px 0 10px; text-align: center; font-size: 13px; color: var(--muted); }
 .legal-foot a { color: var(--orange-dark); text-decoration: none; font-weight: 600; }
+.linklike { background: none; border: none; color: var(--orange-dark); font-weight: 600; cursor: pointer; font-size: 14px; padding: 0; }

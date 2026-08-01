@@ -22,7 +22,7 @@ export async function authenticate(req, _res, next) {
     }
 
     const { rows } = await query(
-      `SELECT id, email, role, status FROM users WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT id, email, role, status, mfa_enabled FROM users WHERE id = $1 AND deleted_at IS NULL`,
       [payload.sub],
     );
     const user = rows[0];

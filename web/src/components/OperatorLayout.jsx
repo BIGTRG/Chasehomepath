@@ -1,10 +1,14 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import MfaEnroll from '../screens/operator/MfaEnroll.jsx';
 
 // Operator console shell (spec §5) — desktop-first, wider than the member app.
 export default function OperatorLayout() {
   const { user, logout } = useAuth();
   const isAdmin = user.role === 'admin';
+  // Staff must have MFA before the console opens (server enforces too: 403
+  // mfa_enrollment_required on every operator route until enabled).
+  if (!user.mfa_enabled) return <MfaEnroll />;
   const isManager = user.role === 'admin' || user.role === 'manager';
   return (
     <div className="op-shell">

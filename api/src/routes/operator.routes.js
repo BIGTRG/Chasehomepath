@@ -2,11 +2,13 @@ import { Router } from 'express';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
+import { requireStaffMfa } from '../middleware/requireStaffMfa.js';
 import { STAFF_ROLES } from '../auth/rbac.js';
 import * as op from '../controllers/operator.controller.js';
 
 const router = Router();
 router.use(authenticate);
+router.use(requireStaffMfa);
 
 // Roster + client detail: any staff (specialists limited to their own clients in the service).
 router.get('/roster', authorize(...STAFF_ROLES), asyncHandler(op.roster));

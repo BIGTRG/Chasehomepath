@@ -81,8 +81,10 @@ export default function Qualify() {
         <div className="lbl">Authorization</div>
         <div className="card hl">
           <p style={{ margin: '0 0 10px', fontSize: 13.5, lineHeight: 1.6 }}>
-            I authorize CHASE HomePath to pull my credit to build my plan. I understand a
-            fee applies and my score won't be shown yet.
+            I authorize CHASE HomePath to obtain my credit report through its credit
+            monitoring provider to build my plan. Any monitoring fee is the provider's own
+            charge under its terms — CHASE HomePath does not charge me for this. My score
+            won't be shown until my first consultation.
           </p>
           <label className="consent" style={{ marginBottom: 0 }}>
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />

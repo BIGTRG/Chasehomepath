@@ -59,6 +59,8 @@ export const env = {
     accessTtl: int('JWT_ACCESS_TTL', 900),
     refreshTtl: int('JWT_REFRESH_TTL', 2592000),
     mfaIssuer: optional('MFA_ISSUER', 'CHASE HomePath'),
+    // Staff MFA enforcement — on in production unless explicitly disabled.
+    requireStaffMfa: optional('REQUIRE_STAFF_MFA', isProd ? 'true' : 'false') === 'true',
   },
 
   encryption: {
