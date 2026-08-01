@@ -67,7 +67,7 @@ export default function Register() {
           <label className="consent" style={{ marginBottom: 0 }}>
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
             <span>
-              I agree to the <strong>Terms</strong> and <strong>Privacy Policy</strong>. My data is never sold.
+              I agree to the <Link to="/terms"><strong>Terms</strong></Link> and <Link to="/privacy"><strong>Privacy Policy</strong></Link>. My data is never sold.
             </span>
           </label>
         </div>

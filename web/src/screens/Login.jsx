@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 // Walkthrough screen A: logo-led, warm, mobile-first. The American Dream line anchors it.
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const notice = useLocation().state?.notice;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfaToken, setMfaToken] = useState('');
@@ -37,6 +38,7 @@ export default function Login() {
       <img src="/logo.png" alt="CHASE HomePath" className="auth-logo" />
       <p className="auth-tagline">Ensuring the American Dream</p>
 
+      {notice && !error && <div className="note" style={{ marginBottom: 14 }}>{notice}</div>}
       {error && <div className="error">{error}</div>}
 
       <form onSubmit={onSubmit}>
@@ -65,7 +67,7 @@ export default function Login() {
       </form>
 
       <p className="link-line">
-        <a href="mailto:support@chasehomepath.com?subject=Password%20help">Forgot password?</a>
+        <Link to="/forgot">Forgot password?</Link>
       </p>
 
       <p className="center-link">

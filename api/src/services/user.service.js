@@ -40,6 +40,13 @@ export async function createUser({ email, phone = null, password, role, status =
   return rows[0];
 }
 
+export async function setPassword(userId, passwordHash, db = query) {
+  await db(`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1 AND deleted_at IS NULL`, [
+    userId,
+    passwordHash,
+  ]);
+}
+
 export async function markLoggedIn(userId, db = query) {
   await db(`UPDATE users SET last_login_at = now() WHERE id = $1`, [userId]);
 }

@@ -5,17 +5,19 @@ import {
   findByEmail,
   findById,
   markLoggedIn,
+  setPassword,
   enableMfa,
   disableMfa,
   toPublic,
 } from '../services/user.service.js';
 import { createMemberProfile } from '../services/member.service.js';
-import { verifyPassword, validatePasswordStrength } from '../auth/password.js';
+import { verifyPassword, validatePasswordStrength, hashPassword } from '../auth/password.js';
 import {
   signAccessToken,
   issueRefreshToken,
   rotateRefreshToken,
   revokeRefreshToken,
+  revokeAllForUser,
 } from '../auth/tokens.js';
 import {
   generateSecret,
@@ -25,6 +27,9 @@ import {
   decryptSecret,
 } from '../auth/mfa.js';
 import { audit } from '../lib/audit.js';
+import { sendMail } from '../lib/mailer.js';
+import crypto from 'node:crypto';
+import { query } from '../db/pool.js';
 import { AuthError, ValidationError, ConflictError } from '../lib/errors.js';
 import { env } from '../config/env.js';
 
@@ -213,4 +218,89 @@ export async function mfaDisable(req, res) {
     );
   });
   res.json({ mfaEnabled: false });
+}
+
+// ── Password reset ───────────────────────────────────────────────────────────
+// Tokens are random 48-byte values stored only as SHA-256 hashes, single-use,
+// 30-minute expiry. /forgot always answers 202 so it can't be used to probe
+// which emails have accounts.
+
+const RESET_TTL_MS = 30 * 60 * 1000;
+const hashResetToken = (raw) => crypto.createHash('sha256').update(raw).digest('hex');
+
+const forgotSchema = z.object({ email: emailSchema });
+
+export async function forgotPassword(req, res) {
+  const { email } = forgotSchema.parse(req.body);
+  const user = await findByEmail(email);
+
+  if (user && user.status === 'active') {
+    const raw = crypto.randomBytes(48).toString('base64url');
+    const expiresAt = new Date(Date.now() + RESET_TTL_MS);
+    await withTransaction(async (db) => {
+      // One live token per user: invalidate any earlier unused tokens.
+      await db(`UPDATE password_resets SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`, [user.id]);
+      await db(
+        `INSERT INTO password_resets (user_id, token_hash, expires_at, ip) VALUES ($1, $2, $3, $4)`,
+        [user.id, hashResetToken(raw), expiresAt, req.ip ?? null],
+      );
+      await audit(
+        { actorUserId: user.id, actorRole: user.role, action: 'auth.password_reset_requested', entityType: 'user', entityId: user.id, ...meta(req) },
+        db,
+      );
+    });
+    const link = `${env.app.publicUrl}/reset?token=${raw}`;
+    // Deliberately not awaited into the response path — same 202 either way.
+    sendMail({
+      to: user.email,
+      subject: 'Reset your CHASE HomePath password',
+      text: [
+        'Someone (hopefully you) asked to reset the password for this CHASE HomePath account.',
+        '',
+        `Reset it here (link works for 30 minutes): ${link}`,
+        '',
+        "If you didn't ask for this, you can ignore this email — your password is unchanged.",
+        '',
+        'CHASE HomePath — Ensuring the American Dream',
+        'support@chasehomepath.com',
+      ].join('\n'),
+    });
+  }
+
+  res.status(202).json({ ok: true });
+}
+
+const resetSchema = z.object({ token: z.string().trim().min(20), password: passwordSchema });
+
+export async function resetPassword(req, res) {
+  const { token, password } = resetSchema.parse(req.body);
+  const strength = validatePasswordStrength(password);
+  if (!strength.ok) throw new ValidationError(strength.reason);
+
+  const { rows } = await query(
+    `SELECT id, user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1`,
+    [hashResetToken(token)],
+  );
+  const row = rows[0];
+  if (!row || row.used_at || new Date(row.expires_at) < new Date()) {
+    throw new AuthError('This reset link is invalid or has expired', 'reset_invalid');
+  }
+  const user = await findById(row.user_id);
+  if (!user || user.status !== 'active') {
+    throw new AuthError('This reset link is invalid or has expired', 'reset_invalid');
+  }
+
+  const passwordHash = await hashPassword(password);
+  await withTransaction(async (db) => {
+    await db(`UPDATE password_resets SET used_at = now() WHERE id = $1`, [row.id]);
+    await setPassword(user.id, passwordHash, db);
+    // A reset invalidates every existing session on every device.
+    await revokeAllForUser(user.id, db);
+    await audit(
+      { actorUserId: user.id, actorRole: user.role, action: 'auth.password_reset_completed', entityType: 'user', entityId: user.id, ...meta(req) },
+      db,
+    );
+  });
+
+  res.json({ ok: true });
 }

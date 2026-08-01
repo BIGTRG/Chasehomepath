@@ -378,3 +378,12 @@ body {
   .op-side { width: 100%; flex-direction: row; flex-wrap: wrap; }
   .op-shell { flex-direction: column; }
 }
+
+/* ── Legal pages ────────────────────────────────────────────────────────── */
+.legal { max-width: 720px; margin: 0 auto; }
+.legal h2 { font-size: 16px; margin: 22px 0 8px; color: var(--ink); }
+.legal p, .legal li { font-size: 14px; line-height: 1.55; color: #4a463f; }
+.legal ul { padding-left: 20px; margin: 8px 0; }
+.legal-lede { background: #fdf1e0; border-radius: 12px; padding: 12px 14px; }
+.legal-foot { margin: 30px 0 10px; text-align: center; font-size: 13px; color: var(--muted); }
+.legal-foot a { color: var(--orange-dark); text-decoration: none; font-weight: 600; }

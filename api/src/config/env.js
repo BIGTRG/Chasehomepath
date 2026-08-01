@@ -73,6 +73,19 @@ export const env = {
       .filter(Boolean),
   },
 
+  mail: {
+    host: optional('SMTP_HOST', ''),
+    port: int('SMTP_PORT', 587),
+    user: optional('SMTP_USER', ''),
+    pass: optional('SMTP_PASS', ''),
+    from: optional('MAIL_FROM', 'CHASE HomePath <support@chasehomepath.com>'),
+  },
+
+  app: {
+    // Public origin used to build links in emails.
+    publicUrl: optional('PUBLIC_URL', 'https://chasehomepath.com'),
+  },
+
   adapters: {
     plaid: optional('PLAID_ADAPTER', 'mock'),
     creditBureau: optional('CREDIT_BUREAU_ADAPTER', 'mock'),

@@ -7,6 +7,10 @@ import OperatorLayout from './components/OperatorLayout.jsx';
 import Login from './screens/Login.jsx';
 import Register from './screens/Register.jsx';
 import Discover from './screens/Discover.jsx';
+import Terms from './screens/legal/Terms.jsx';
+import Privacy from './screens/legal/Privacy.jsx';
+import Forgot from './screens/Forgot.jsx';
+import Reset from './screens/Reset.jsx';
 
 // Intake funnel (walkthrough 2-5)
 import Qualify from './screens/Qualify.jsx';
@@ -49,6 +53,8 @@ function MemberSurface() {
         <Route path="/received" element={<Received />} />
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/prep" element={<Prep />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route element={<MemberLayout />}>
           <Route path="/" element={<PlanHome />} />
           <Route path="/credit" element={<Credit />} />
@@ -100,6 +106,10 @@ function AuthSurface() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/discover" element={<Discover />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/forgot" element={<Forgot />} />
+        <Route path="/reset" element={<Reset />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>
