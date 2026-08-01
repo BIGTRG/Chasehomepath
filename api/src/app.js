@@ -18,8 +18,8 @@ export function createApp() {
     cors({
       origin(origin, cb) {
         // Allow same-origin / server-to-server (no Origin) and configured surfaces.
-        if (!origin || env.cors.origins.includes(origin)) return cb(null, true);
-        return cb(new Error('Origin not allowed by CORS'));
+        // Disallowed origins get a clean deny (no ACAO headers), not a 500.
+        return cb(null, !origin || env.cors.origins.includes(origin));
       },
       credentials: true,
     }),
