@@ -303,6 +303,13 @@ body {
   height: 150px; border-radius: 12px; background: linear-gradient(150deg, #24406f, #3a5a92);
   display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
 }
+.vid-btn {
+  width: 100%; border: 0; cursor: pointer; padding: 0;
+  background-size: cover; background-position: center; position: relative;
+}
+.vid-btn::before { content: ''; position: absolute; inset: 0; border-radius: 12px; background: rgba(20, 33, 61, 0.45); }
+.vid-btn .play { position: relative; }
+.vid-player { height: auto; aspect-ratio: 16 / 9; width: 100%; background: #000; display: block; }
 .play {
   width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.92);
   display: flex; align-items: center; justify-content: center; color: var(--navy); font-size: 17px;

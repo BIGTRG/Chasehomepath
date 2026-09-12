@@ -19,6 +19,9 @@ export default [
         console: 'readonly',
         setTimeout: 'readonly',
         navigator: 'readonly',
+        FileReader: 'readonly',
+        URL: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
     plugins: { 'react-hooks': reactHooks },
@@ -27,5 +30,10 @@ export default [
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^[A-Z_]' }],
       'no-undef': 'error',
     },
+  },
+  {
+    // Service worker runs in a worker global scope, not the window.
+    files: ['public/sw.js'],
+    languageOptions: { globals: { self: 'readonly', caches: 'readonly', URL: 'readonly', fetch: 'readonly', console: 'readonly' } },
   },
 ];
