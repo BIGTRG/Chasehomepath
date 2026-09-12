@@ -67,6 +67,6 @@ Owner: TRG Tech Link (admin@trgtechlink.com).
   bcrypt passwords, AES-256-GCM field encryption, JWT access+refresh, staff TOTP MFA enforced
   (`REQUIRE_STAFF_MFA=true`), immutable `audit_log` written in-transaction.
 - Edge: HSTS + CSP + X-Frame-Options/nosniff/referrer/permissions policies on the host vhost.
-- Dependency policy: `npm audit` on every CI run surfaces new advisories; patch/minor updates
+- Dependency policy: CI SECURITY GATE — `npm test` runs `posttest` -> `npm run audit:ci` (`npm audit --audit-level=high`), so any high/critical advisory fails the CI `api` job. Lives in root package.json (not the workflow file: the deploy GitHub App lacks `workflows` permission). Moderate advisories are triaged in docs/SECURITY_NOTES.md. `npm audit` on every CI run surfaces new advisories; patch/minor updates
   applied at next deploy; major upgrades (e.g. react-router v7) only in a planned maintenance window.
 - Secrets rotation: rotate `.env` secrets quarterly or on staff departure (see breach steps above).

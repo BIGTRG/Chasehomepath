@@ -68,6 +68,7 @@ export default function Credit() {
         we'll work those a smarter way.
       </div>
 
+      <a href="/smartcredit" className="card hl" style={{ display: "block", textDecoration: "none", color: "inherit", textAlign: "center", padding: "16px" }}><div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange-dark)" }}>SmartCredit&reg; Monitoring</div><div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>3-Bureau reports &amp; scores &mdash; $1 trial</div><div style={{ fontSize: 12, color: "var(--orange-dark)", fontWeight: 600, marginTop: 8 }}>Learn more &rsaquo;</div></a>
       {/* Score is withheld until the first consultation (spec §8). */}
       {!data.score.withheld && (
         <div className="card score-card">

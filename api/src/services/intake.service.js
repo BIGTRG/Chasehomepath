@@ -96,7 +96,7 @@ export async function saveDocument(memberId, { docType, fileName, mimeType, data
   if (buf.length === 0) throw new ValidationError('Empty file');
   if (buf.length > MAX_UPLOAD_BYTES) throw new ValidationError('File too large (8 MB max)');
 
-  const safeName = String(fileName || 'document').replace(/[^\w.\-]/g, '_').slice(0, 120);
+  const safeName = String(fileName || 'document').replace(/[^\w.-]/g, '_').slice(0, 120);
   const storageKey = `${memberId}/${docType}-${Date.now()}-${safeName}`;
   const target = path.join(UPLOAD_DIR, storageKey);
   await fs.mkdir(path.dirname(target), { recursive: true });

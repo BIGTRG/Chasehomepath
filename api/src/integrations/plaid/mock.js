@@ -17,15 +17,19 @@ export function createMockPlaidAdapter() {
 
     /** Return transactions for the item since a date (inclusive). Deterministic sample. */
     async fetchTransactions(_itemId, { since } = {}) {
+      // Dates land in the current calendar month so month-to-date views and
+      // tests are stable regardless of when they run (days 2..18 exist in every month).
+      const ym = new Date().toISOString().slice(0, 7);
+      const d = (day) => `${ym}-${String(day).padStart(2, '0')}`;
       const all = [
-        { date: '2026-07-02', amount: 1850.0, category: 'income', merchant: 'Employer Payroll' },
-        { date: '2026-07-03', amount: 1200.0, category: 'housing', merchant: 'Rent' },
-        { date: '2026-07-05', amount: 320.0, category: 'groceries', merchant: 'SuperMart' },
-        { date: '2026-07-08', amount: 145.0, category: 'dining', merchant: 'Cafe Row' },
-        { date: '2026-07-10', amount: 90.0, category: 'transport', merchant: 'Transit Card' },
-        { date: '2026-07-12', amount: 210.0, category: 'dining', merchant: 'Restaurants' },
-        { date: '2026-07-15', amount: 60.0, category: 'utilities', merchant: 'Power Co' },
-        { date: '2026-07-18', amount: 250.0, category: 'shopping', merchant: 'Online Store' },
+        { date: d(2), amount: 1850.0, category: 'income', merchant: 'Employer Payroll' },
+        { date: d(3), amount: 1200.0, category: 'housing', merchant: 'Rent' },
+        { date: d(5), amount: 320.0, category: 'groceries', merchant: 'SuperMart' },
+        { date: d(8), amount: 145.0, category: 'dining', merchant: 'Cafe Row' },
+        { date: d(10), amount: 90.0, category: 'transport', merchant: 'Transit Card' },
+        { date: d(12), amount: 210.0, category: 'dining', merchant: 'Restaurants' },
+        { date: d(15), amount: 60.0, category: 'utilities', merchant: 'Power Co' },
+        { date: d(18), amount: 250.0, category: 'shopping', merchant: 'Online Store' },
       ];
       if (!since) return all;
       return all.filter((t) => t.date >= since);

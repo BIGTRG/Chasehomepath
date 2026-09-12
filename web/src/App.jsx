@@ -30,6 +30,7 @@ import Marketplace from './screens/Marketplace.jsx';
 import PlanToLot from './screens/PlanToLot.jsx';
 import Agent from './screens/Agent.jsx';
 import Homeowner from './screens/Homeowner.jsx';
+import SmartCredit from './screens/SmartCredit.jsx';
 
 // Operator surface
 import Roster from './screens/operator/Roster.jsx';
@@ -66,6 +67,7 @@ function MemberSurface() {
           <Route path="/marketplace/plans/:planId" element={<PlanToLot />} />
           <Route path="/agent" element={<Agent />} />
           <Route path="/home" element={<Homeowner />} />
+          <Route path="/smartcredit" element={<SmartCredit />} />
           <Route path="/disputes" element={<Disputes />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
