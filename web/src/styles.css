@@ -322,6 +322,10 @@ body {
 .opt.sel { border-color: var(--orange); background: var(--note-bg); }
 .opt .n { font-weight: 600; font-size: 14.5px; }
 .opt .s { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.opt .opt-body { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; padding-right: 10px; }
+.consent-row { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0 12px; font-size: 13px; line-height: 1.45; color: var(--ink); }
+.consent-row input { margin-top: 3px; flex: none; width: 18px; height: 18px; }
+.consent-row span { flex: 1 1 auto; min-width: 0; }
 .opt .dot-sel { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex: none; }
 .ctr { text-align: center; }
 .big-check {

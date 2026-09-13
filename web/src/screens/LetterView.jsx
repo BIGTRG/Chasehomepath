@@ -97,14 +97,12 @@ export default function LetterView() {
           <div className="s" style={{ marginBottom: 8 }}>Certified Mail is the strong recommendation: the receipt proves the date, and the return receipt proves they got it.</div>
           {c.mailService?.enabled && quote?.canMail && (
             <button type="button" className={`opt ${path === 'service' ? 'sel' : ''}`} onClick={() => setPath('service')}>
-              <span className="n">Mail it for me · {money(quote.amountCents)}</span>
-              <span className="s">Printed and sent by USPS Certified Mail with electronic return receipt. Copy, tracking, and delivery receipt land in your records.</span>
+              <span className="opt-body"><span className="n">Mail it for me · {money(quote.amountCents)}</span><span className="s">Printed and sent by USPS Certified Mail with electronic return receipt. Copy, tracking, and delivery receipt land in your records.</span></span>
               {path === 'service' && <span className="dot-sel" />}
             </button>
           )}
           <button type="button" className={`opt ${path === 'self' ? 'sel' : ''}`} onClick={() => setPath('self')}>
-            <span className="n">I will print, sign, and mail it myself</span>
-            <span className="s">Print it, add your ID and proof of address, take it to the Post Office, then mark it sent here and photograph your receipt.</span>
+            <span className="opt-body"><span className="n">I will print, sign, and mail it myself</span><span className="s">Print it, add your ID and proof of address, take it to the Post Office, then mark it sent here and photograph your receipt.</span></span>
             {path === 'self' && <span className="dot-sel" />}
           </button>
         </div>
@@ -117,9 +115,9 @@ export default function LetterView() {
           <div className="row" style={{ padding: '4px 0', borderTop: '1px solid var(--line)' }}><div className="grow n">Total, at the carrier's price</div><div className="n">{money(quote.amountCents)}</div></div>
           <div className="s" style={{ margin: '8px 0' }}>{quote.pages} page{quote.pages === 1 ? '' : 's'}. The letter goes exactly as you signed it.</div>
           <div className="field"><label>Card or bank on file is used. New card (optional)</label><input value={card} onChange={(e) => setCard(e.target.value)} placeholder="Leave blank to use what is on file" autoComplete="off" /></div>
-          <label className="check" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', margin: '8px 0' }}>
-            <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 4 }} />
-            <span className="s" style={{ color: 'var(--ink)' }}>{quote.consentText}</span>
+          <label className="consent-row">
+            <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+            <span>{quote.consentText}</span>
           </label>
           <button type="button" className="btn" disabled={busy || !agree} onClick={() => act(() => creditApi.mailLetter(id, { consentAccepted: agree, paymentMethodToken: card.trim() || undefined }))}>Mail it for me · {money(quote.amountCents)}</button>
         </div>
