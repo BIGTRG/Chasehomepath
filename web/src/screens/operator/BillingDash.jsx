@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { billing as billingApi } from '../../api/client.js';
+import { billing as billingApi, operator as operatorApi } from '../../api/client.js';
 
 const money = (c) => `$${(c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
@@ -10,9 +10,11 @@ export default function BillingDash() {
   const [cat, setCat] = useState(null);
   const [form, setForm] = useState({ topicCode: 'budget_101', scheduledAt: '', capacity: 12, priceCents: '' });
   const [msg, setMsg] = useState(null);
+  const [mail, setMail] = useState(null);
+  const [mailMsg, setMailMsg] = useState(null);
 
   const load = () => billingApi.operatorSummary().then(setS).catch((e) => setError(e.message));
-  useEffect(() => { load(); billingApi.counseling().then(setCat).catch(() => {}); }, []);
+  useEffect(() => { load(); billingApi.counseling().then(setCat).catch(() => {}); operatorApi.mailService().then(setMail).catch(() => {}); }, []);
 
   if (error) return <div className="error">{error}</div>;
   if (!s) return <div className="loading">Loading…</div>;
@@ -78,6 +80,19 @@ export default function BillingDash() {
               ))}
             </>
           )}
+        </section>
+
+        <section className="card">
+          <div className="h2" style={{ marginTop: 0 }}>Mail it for me</div>
+          <div className="tsub">Members can have a signed dispute letter printed and sent by USPS Certified Mail with electronic return receipt, at the carrier's price with no markup. Off means every member prints and mails their own letters.</div>
+          {mail && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 10 }}>
+              <span className={`hbadge ${mail.enabled ? 'green' : 'amber'}`}>{mail.enabled ? 'On' : 'Off'}</span>
+              <span className="tsub">Provider: {mail.provider}{mail.provider === 'mock' ? ' (test mode, nothing is mailed)' : ''}</span>
+              <button type="button" className="btn ghost" style={{ marginLeft: 'auto', width: 'auto' }} onClick={async () => { setMailMsg(null); try { setMail(await operatorApi.setMailService(!mail.enabled)); } catch (e) { setMailMsg(e.message); } }}>{mail.enabled ? 'Turn off' : 'Turn on'}</button>
+            </div>
+          )}
+          {mailMsg && <div className="tsub" style={{ marginTop: 8 }}>{mailMsg}</div>}
         </section>
 
         <section className="card">

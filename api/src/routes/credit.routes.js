@@ -4,8 +4,16 @@ import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
 import * as credit from '../controllers/credit.controller.js';
 import * as dispute from '../controllers/dispute.controller.js';
+import express from 'express';
+import { requireStaffMfa } from '../middleware/requireStaffMfa.js';
+import { STAFF_ROLES } from '../auth/rbac.js';
 
 const router = Router();
+
+// Mail provider webhook: raw body, no auth header. Operator switch for the mail service.
+router.post('/mail-webhook', express.raw({ type: '*/*', limit: '1mb' }), asyncHandler(dispute.mailWebhook));
+router.get('/operator/mail-service', authenticate, requireStaffMfa, authorize(...STAFF_ROLES), asyncHandler(dispute.getMailService));
+router.put('/operator/mail-service', authenticate, requireStaffMfa, authorize('manager', 'admin'), asyncHandler(dispute.setMailService));
 
 // All credit work is the member's own (self-directed, spec §8).
 router.use(authenticate, authorize('member'));
@@ -25,6 +33,9 @@ router.get('/letters/:letterId', asyncHandler(dispute.getByLetter));
 router.put('/letters/:letterId', asyncHandler(dispute.editLetter));
 router.post('/letters/:letterId/sign', asyncHandler(dispute.approveLetter));
 router.post('/letters/:letterId/sent', asyncHandler(dispute.markSent));
+router.get('/letters/:letterId/mail-quote', asyncHandler(dispute.mailQuote));
+router.post('/letters/:letterId/mail', asyncHandler(dispute.mailLetter));
+router.post('/letters/:letterId/proofs', asyncHandler(dispute.attachProof));
 router.get('/scores', asyncHandler(credit.scoreHistory));
 router.post('/scores', asyncHandler(credit.recordScores));
 router.get('/items/:id', asyncHandler(credit.itemDetail));

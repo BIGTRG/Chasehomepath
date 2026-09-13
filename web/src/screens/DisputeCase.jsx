@@ -65,7 +65,7 @@ export default function DisputeCase() {
         <div className="s" style={{ color: 'var(--orange-dark)', fontWeight: 700 }}>{COUNSELOR.name} says</div>
         <div className="n" style={{ fontSize: 16 }}>{next.title}</div>
         <div className="s" style={{ lineHeight: 1.5, marginTop: 4 }}>{next.text}</div>
-        {next.letterId && <Link to={`/credit/letters/${next.letterId}`} className="btn" style={{ marginTop: 10 }}>{next.code === 'review' ? 'Review the letter' : 'Open the letter'}</Link>}
+        {next.letterId && <Link to={`/credit/letters/${next.letterId}`} className="btn" style={{ marginTop: 10 }}>{next.code === 'review' ? 'Review the letter' : next.code === 'proof' ? 'Add the proof' : 'Open the letter'}</Link>}
         {d.dueAt && open && <div className="s" style={{ marginTop: 8 }}>Answer expected by {fmt(d.dueAt)} · day {d.dayCount}</div>}
       </div>
 
@@ -105,7 +105,7 @@ export default function DisputeCase() {
           {rounds.length > 1 && <div className="s" style={{ fontWeight: 700, marginBottom: 6 }}>Round {r}</div>}
           {letters.filter((l) => l.round === r).map((l) => (
             <Link to={`/credit/letters/${l.id}`} className="row" key={l.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="grow"><div className="n">{KIND[l.kind]} · {l.recipient_name}</div><div className="s">{l.status === 'sent' ? `Sent ${fmt(l.sent_at)} by ${String(l.sent_method).replace('_', ' ')}${l.tracking ? ` · ${l.tracking}` : ''}` : l.status === 'approved' ? `Signed ${fmt(l.approved_at)}` : 'Draft'}</div></div>
+              <div className="grow"><div className="n">{KIND[l.kind]} · {l.recipient_name}</div><div className="s">{l.status === 'sent' ? `Sent ${fmt(l.sent_at)} ${l.sent_method === 'mail_service' ? 'for you, certified' : `by ${String(l.sent_method).replace('_', ' ')}`}${l.tracking ? ` · ${l.tracking}` : ''}` : l.status === 'approved' ? `Signed ${fmt(l.approved_at)}` : 'Draft'}{l.status === 'sent' && <> · {l.proofsMissing?.length ? <span style={{ color: 'var(--orange)', fontWeight: 600 }}>proof needed</span> : <span style={{ color: 'var(--green-ink)', fontWeight: 600 }}>proof on file{l.mail_status === 'delivered' ? ', delivered' : ''}</span>}</>}</div></div>
               <span className={`pill ${STATUS[l.status][1]}`}>{STATUS[l.status][0]}</span>
             </Link>
           ))}
@@ -115,7 +115,7 @@ export default function DisputeCase() {
       <div className="lbl">Timeline</div>
       <div className="card list timeline">
         {events.map((e) => (
-          <div className="row" key={e.id}><span className={`dot ${e.kind === 'response' || e.kind === 'letter_sent' ? 'g' : ''}`} /><div className="grow"><div className="s" style={{ color: 'var(--ink)' }}>{e.text}</div><div className="s">{new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div></div></div>
+          <div className="row" key={e.id}><span className={`dot ${e.kind === 'response' || e.kind === 'letter_sent' || e.kind === 'proof_added' || e.kind === 'mail_status' ? 'g' : ''}`} /><div className="grow"><div className="s" style={{ color: 'var(--ink)' }}>{e.text}</div><div className="s">{new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div></div></div>
         ))}
       </div>
 

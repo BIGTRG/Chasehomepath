@@ -99,6 +99,7 @@ export const env = {
     payment: optional('PAYMENT_ADAPTER', 'mock'),
     paymentReporting: optional('PAYMENT_REPORTING_ADAPTER', 'mock'),
     creditMonitoring: optional('CREDIT_MONITORING_ADAPTER', 'mock'),
+    mail: optional('MAIL_ADAPTER', 'mock'),
   },
 
   payments: {

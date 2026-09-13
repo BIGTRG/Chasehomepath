@@ -116,6 +116,9 @@ export const credit = {
   editLetter: (letterId, body) => api(`/credit/letters/${letterId}`, { method: 'PUT', body }),
   signLetter: (letterId, body) => api(`/credit/letters/${letterId}/sign`, { method: 'POST', body }),
   markSent: (letterId, body) => api(`/credit/letters/${letterId}/sent`, { method: 'POST', body }),
+  mailQuote: (letterId) => api(`/credit/letters/${letterId}/mail-quote`),
+  mailLetter: (letterId, body) => api(`/credit/letters/${letterId}/mail`, { method: 'POST', body }),
+  attachProof: (letterId, body) => api(`/credit/letters/${letterId}/proofs`, { method: 'POST', body }),
   scores: () => api('/credit/scores'),
   recordScores: (body) => api('/credit/scores', { method: 'POST', body }),
 };
@@ -192,6 +195,8 @@ export const operator = {
   users: (role) => api(`/operator/users${role ? `?role=${role}` : ''}`),
   patchUser: (id, body) => api(`/operator/users/${id}`, { method: 'PATCH', body }),
   patchStaff: (userId, body) => api(`/operator/team/${userId}`, { method: 'PATCH', body }),
+  mailService: () => api('/credit/operator/mail-service'),
+  setMailService: (enabled) => api('/credit/operator/mail-service', { method: 'PUT', body: { enabled } }),
   programs: () => api('/operator/programs'),
 };
 

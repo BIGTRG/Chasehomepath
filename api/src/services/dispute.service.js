@@ -4,6 +4,11 @@ import { audit } from '../lib/audit.js';
 import { assertMemberInitiated } from '../compliance/rules.js';
 import { COUNSELOR } from '../lib/counselor.js';
 import { BUREAUS, REASONS, bureauDispute, movRequest, furnisherDirect, debtValidation, cfpbComplaint, sendingSteps } from '../credit/letters.js';
+import { renderLetterPdf } from '../credit/letterPdf.js';
+import { getMailAdapter } from '../integrations/mail/index.js';
+import { saveDocument } from './intake.service.js';
+import { chargeOnce } from './billing.service.js';
+import { env } from '../config/env.js';
 
 /**
  * Do-it-yourself dispute workflow. Maren drafts every letter and tells the member the next
@@ -136,8 +141,11 @@ export async function getDispute(member, disputeId, db = query) {
   const d = rows[0];
   if (!d) throw new NotFoundError('Dispute not found');
   const { rows: letters } = await db(
-    `SELECT id, round, kind, recipient_key, recipient_name, recipient_addr, body, status, signed_name, approved_at, sent_at::text AS sent_at, sent_method, tracking, created_at
-       FROM dispute_letters WHERE dispute_id = $1 AND deleted_at IS NULL ORDER BY round, created_at`,
+    `SELECT l.id, l.round, l.kind, l.recipient_key, l.recipient_name, l.recipient_addr, l.body, l.status, l.signed_name, l.approved_at, l.sent_at::text AS sent_at, l.sent_method, l.tracking, l.created_at,
+            l.mail_provider, l.mail_ref, l.mail_status, l.mail_cost_cents, l.expected_delivery::text AS expected_delivery,
+            COALESCE((SELECT json_agg(json_build_object('id', p.id, 'kind', p.kind, 'source', p.source, 'documentId', p.document_id, 'fileName', md.file_name, 'mimeType', md.mime_type, 'createdAt', p.created_at) ORDER BY p.created_at)
+                        FROM letter_proofs p JOIN member_documents md ON md.id = p.document_id WHERE p.letter_id = l.id AND p.deleted_at IS NULL), '[]'::json) AS proofs
+       FROM dispute_letters l WHERE l.dispute_id = $1 AND l.deleted_at IS NULL ORDER BY l.round, l.created_at`,
     [disputeId],
   );
   const { rows: events } = await db(`SELECT id, kind, text, meta, created_at FROM dispute_events WHERE dispute_id = $1 ORDER BY created_at`, [disputeId]);
@@ -149,11 +157,12 @@ export async function getDispute(member, disputeId, db = query) {
       outcome: d.outcome, outcomeAt: d.outcome_at, outcomeNote: d.outcome_note,
       item: { id: d.credit_item_id, creditor: d.creditor, type: d.type, balance: d.balance },
     },
-    letters: letters.map((l) => ({ ...l, steps: sendingSteps(l.kind), online: BUREAUS[l.recipient_key]?.online ?? (l.recipient_key === 'cfpb' ? 'https://www.consumerfinance.gov/complaint/' : null) })),
+    letters: letters.map((l) => ({ ...l, proofsMissing: missingProofs(l), steps: sendingSteps(l.kind), online: BUREAUS[l.recipient_key]?.online ?? (l.recipient_key === 'cfpb' ? 'https://www.consumerfinance.gov/complaint/' : null) })),
     events,
     letterhead: head,
     evidence: REASONS[d.reason_code]?.evidence ?? [],
     next: nextStep(d, letters, head),
+    mailService: await mailServiceSettings(db),
     counselor: { name: COUNSELOR.name, disclosure: COUNSELOR.disclosure },
   };
 }
@@ -175,6 +184,11 @@ export function nextStep(d, letters, head) {
   const approved = cur.filter((l) => l.status === 'approved');
   if (approved.length) return { code: 'send', title: `Print and send ${approved.length === 1 ? 'your letter' : `${approved.length} letters`}`, text: 'Certified mail with return receipt is best; the receipt is your proof of the date. Or copy the text into the bureau portal. Mark each one sent when it is on its way.', letterId: approved[0].id };
   if (d.status === 'filed' || d.status === 'investigating') {
+    const needProof = cur.filter((l) => l.status === 'sent' && missingProofs(l).length);
+    if (needProof.length && !d.outcome) {
+      const days = liveDays(d);
+      if (days <= 10) return { code: 'proof', title: 'Add your proof of mailing', text: `Take a photo of the signed letter and the certified mail receipt for ${needProof.length === 1 ? needProof[0].recipient_name : `each of the ${needProof.length} envelopes`}. It goes in your records so the proof is always there if anyone asks.`, letterId: needProof[0].id };
+    }
     const due = d.due_at ? (d.due_at instanceof Date ? new Date(d.due_at.getTime() + 12 * 3600 * 1000) : new Date(`${String(d.due_at).slice(0, 10)}T12:00:00`)) : null;
     const overdue = due && due < new Date();
     if (!d.outcome && !overdue) return { code: 'wait', title: 'Waiting on their answer', text: `They have ${RESPONSE_DAYS} days from receipt. Expect a letter or an email by ${due ? due.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'the due date'}. When it arrives, record what they said here.` };
@@ -232,23 +246,181 @@ export async function markSent(member, letterId, { method, sentOn, tracking }, a
     const sentDate = day.toISOString().slice(0, 10);
     await db(`UPDATE dispute_letters SET status = 'sent', sent_at = $2, sent_method = $3, tracking = $4 WHERE id = $1`, [letterId, sentDate, method, tracking?.trim() || null]);
 
-    const waitDays = RESPONSE_DAYS + (method === 'online' ? 0 : MAIL_DAYS);
-    const nextStatus = l.kind === 'bureau_dispute' ? 'filed' : 'investigating';
-    // First send opens the clock; later sends never shorten it.
-    await db(
-      `UPDATE disputes SET status = CASE WHEN status IN ('draft','filed','investigating') THEN $2 ELSE status END,
-                           filed_at = CASE WHEN status = 'draft' THEN $6::date::timestamptz ELSE filed_at END,
-                           due_at = GREATEST(COALESCE(due_at, $3::date), $3::date),
-                           outcome = CASE WHEN $4 > 1 THEN NULL ELSE outcome END, outcome_at = CASE WHEN $4 > 1 THEN NULL ELSE outcome_at END,
-                           method = $5
-        WHERE id = $1`,
-      [l.dispute_id, nextStatus, new Date(day.getTime() + waitDays * 86400000).toISOString().slice(0, 10), l.round, method === 'online' ? 'online' : 'mail', sentDate],
-    );
+    await openClock(db, l, sentDate, method);
     await db(`INSERT INTO dispute_events (dispute_id, kind, text, meta) VALUES ($1, 'letter_sent', $2, $3)`,
       [l.dispute_id, `You sent the letter to ${l.recipient_name} by ${method.replace('_', ' ')}${tracking ? ` (tracking ${tracking.trim()})` : ''}.`, JSON.stringify({ letterId, method, sentOn: sentDate })]);
     await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'dispute.letter_sent', entityType: 'dispute_letter', entityId: letterId, metadata: { method, sentOn: sentDate }, ...actor.reqMeta }, db);
     return getDispute(member, l.dispute_id, db);
   });
+}
+
+/** What a self-mailed letter still owes the record. Service-mailed letters get their copies from the system. */
+function missingProofs(l) {
+  if (l.status !== 'sent') return [];
+  const have = new Set((l.proofs ?? []).map((p) => p.kind));
+  const want = l.sent_method === 'certified_mail' ? ['signed_letter', 'certified_receipt'] : l.sent_method === 'mail' || l.sent_method === 'fax' ? ['signed_letter'] : [];
+  return want.filter((k) => !have.has(k));
+}
+
+export const PROOF_KINDS = Object.freeze({
+  signed_letter: 'Photo or scan of the signed letter',
+  certified_receipt: 'Certified Mail receipt (PS Form 3800) with the tracking number',
+  return_receipt: 'Return receipt (green card or electronic)',
+  delivery_proof: 'USPS delivery confirmation',
+  other: 'Other proof',
+});
+
+// ---------------------------------------------------------------------------
+// Mail it for me: a mail house prints and sends the letter the member signed
+// ---------------------------------------------------------------------------
+export async function mailServiceSettings(db = query) {
+  const { rows } = await db(`SELECT value FROM billing_settings WHERE key = 'mail_service'`);
+  const v = rows[0]?.value ?? { enabled: false };
+  return { enabled: v.enabled === true, name: v.name ?? 'Mail it for me', carrier: v.carrier ?? 'USPS Certified Mail with electronic return receipt', provider: env.adapters.mail };
+}
+
+export async function setMailService({ enabled }, actor) {
+  await query(`INSERT INTO billing_settings (key, value) VALUES ('mail_service', jsonb_build_object('enabled', $1::boolean, 'name', 'Mail it for me', 'carrier', 'USPS Certified Mail with electronic return receipt'))
+               ON CONFLICT (key) DO UPDATE SET value = billing_settings.value || jsonb_build_object('enabled', $1::boolean), updated_at = now()`, [enabled === true]);
+  await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'dispute.mail_service_toggled', entityType: 'setting', entityId: null, metadata: { enabled: enabled === true }, ...actor.reqMeta });
+  return mailServiceSettings();
+}
+
+export function mailConsentText({ amountCents, recipientName }) {
+  return `I direct CHASE HomePath to print the letter I signed and mail it for me to ${recipientName} by USPS Certified Mail with electronic return receipt. ` +
+    `I agree to pay ${(amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}, which is the mail carrier's own price passed through with no markup. ` +
+    'I wrote and approved this letter; CHASE HomePath is only mailing it at my direction and does not promise any result. A copy of the letter, the tracking number, and the delivery receipt will be saved to my records.';
+}
+
+export async function mailQuote(member, letterId) {
+  const svc = await mailServiceSettings();
+  const { rows } = await query(`SELECT l.*, d.status AS dispute_status FROM dispute_letters l JOIN disputes d ON d.id = l.dispute_id WHERE l.id = $1 AND l.member_id = $2 AND l.deleted_at IS NULL`, [letterId, member.id]);
+  const l = rows[0];
+  if (!l) throw new NotFoundError('Letter not found');
+  const { pages } = await renderLetterPdf({ body: l.body, signedName: l.signed_name, signedAt: l.approved_at });
+  const quote = await getMailAdapter().quote({ pages });
+  return { enabled: svc.enabled, carrier: svc.carrier, pages, ...quote, consentText: mailConsentText({ amountCents: quote.amountCents, recipientName: l.recipient_name }), canMail: svc.enabled && l.status === 'approved' && l.kind !== 'cfpb_complaint' };
+}
+
+export async function mailLetter(member, letterId, { paymentMethodToken, consentAccepted }, actor) {
+  const svc = await mailServiceSettings();
+  if (!svc.enabled) throw new ConflictError('Mail service is not available right now. Print and mail the letter yourself.', 'mail_service_off');
+  if (consentAccepted !== true) throw new ValidationError('Please read and agree to the mailing authorization');
+  const head = await letterhead(member);
+  if (!head.complete) throw new ConflictError('Add your mailing address first', 'letterhead_missing');
+
+  // Read, render, charge outside the row lock; then record everything in one transaction.
+  const { rows } = await query(`SELECT * FROM dispute_letters WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL`, [letterId, member.id]);
+  const l = rows[0];
+  if (!l) throw new NotFoundError('Letter not found');
+  if (l.status === 'draft') throw new ConflictError('Sign the letter before mailing it', 'letter_unsigned');
+  if (l.status === 'sent') throw new ConflictError('Already sent', 'letter_sent');
+  if (l.kind === 'cfpb_complaint') throw new ValidationError('CFPB complaints are filed online, not mailed');
+  const addr = parseAddress(l.recipient_addr);
+  if (!addr) throw new ValidationError('This recipient needs a full mailing address before it can be mailed');
+
+  const { pdf, pages } = await renderLetterPdf({ body: l.body, signedName: l.signed_name, signedAt: l.approved_at });
+  const adapter = getMailAdapter();
+  const quote = await adapter.quote({ pages });
+  const consentText = mailConsentText({ amountCents: quote.amountCents, recipientName: l.recipient_name });
+  const payment = await chargeOnce(member, { kind: 'mail', amountCents: quote.amountCents, description: `Certified mail to ${l.recipient_name}`, paymentMethodToken, metadata: { letterId } });
+
+  let piece;
+  try {
+    piece = await adapter.send({ letterId, pdf, pages, description: `Dispute letter to ${l.recipient_name}`, to: { name: l.recipient_name, ...addr }, from: { name: head.name, line1: head.address.line1, line2: head.address.line2 ?? null, city: head.address.city, state: head.address.state, zip: head.address.zip } });
+  } catch (e) {
+    await query(`UPDATE payments SET status = 'refunded', failure_reason = $2 WHERE id = $1`, [payment.id, `mail_failed: ${e.message}`]);
+    throw new ConflictError('The mail service could not accept the letter. You were not charged. Print and mail it yourself, or try again.', 'mail_failed');
+  }
+
+  const copy = await saveDocument(member.id, { docType: 'letter_copy', fileName: `letter-${l.recipient_key}-round${l.round}.pdf`, mimeType: 'application/pdf', dataBase64: pdf.toString('base64') }, actor);
+  const sentDate = new Date().toISOString().slice(0, 10);
+  return withTransaction(async (db) => {
+    await db(`UPDATE dispute_letters SET status = 'sent', sent_at = $2, sent_method = 'mail_service', tracking = $3, mail_provider = $4, mail_ref = $5, mail_status = $6, mail_cost_cents = $7, expected_delivery = $8, payment_id = $9 WHERE id = $1`,
+      [letterId, sentDate, piece.trackingNumber, adapter.name, piece.ref, piece.status, quote.amountCents, piece.expectedDelivery ?? null, payment.id]);
+    await db(`INSERT INTO letter_proofs (letter_id, member_id, document_id, kind, source) VALUES ($1, $2, $3, 'signed_letter', 'system')`, [letterId, member.id, copy.id]);
+    await openClock(db, l, sentDate, 'mail');
+    await db(`INSERT INTO dispute_events (dispute_id, kind, text, meta) VALUES ($1, 'letter_sent', $2, $3)`,
+      [l.dispute_id, `Mailed for you to ${l.recipient_name} by ${svc.carrier}${piece.trackingNumber ? ` (tracking ${piece.trackingNumber})` : ''}. A copy of the signed letter is in your records.`, JSON.stringify({ letterId, method: 'mail_service', sentOn: sentDate, ref: piece.ref, amountCents: quote.amountCents, consentText })]);
+    await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'dispute.letter_mailed_for_member', entityType: 'dispute_letter', entityId: letterId, metadata: { provider: adapter.name, ref: piece.ref, amountCents: quote.amountCents, paymentId: payment.id, consentText }, ...actor.reqMeta }, db);
+    return getDispute(member, l.dispute_id, db);
+  });
+}
+
+/** "P.O. Box 4500\nAllen, TX 75013" or "Line1\nLine2\nCity, ST 12345" -> structured, or null when incomplete. */
+function parseAddress(text) {
+  const lines = String(text ?? '').split('\n').map((x) => x.trim()).filter(Boolean);
+  if (lines.length < 2) return null;
+  const last = lines.at(-1);
+  const m = last.match(/^(.+),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/);
+  if (!m) return null;
+  const street = lines.slice(0, -1);
+  if (/^[a-z]/i.test(street[0]) && street.length > 1 && !/\d/.test(street[0])) street.shift(); // company name line handled by recipient_name
+  return { line1: street[0], line2: street[1] ?? null, city: m[1], state: m[2], zip: m[3] };
+}
+
+/** Shared clock logic for a send (self or service). */
+async function openClock(db, l, sentDate, method) {
+  const day = new Date(`${sentDate}T12:00:00Z`);
+  const waitDays = RESPONSE_DAYS + (method === 'online' ? 0 : MAIL_DAYS);
+  const nextStatus = l.kind === 'bureau_dispute' ? 'filed' : 'investigating';
+  await db(
+    `UPDATE disputes SET status = CASE WHEN status IN ('draft','filed','investigating') THEN $2 ELSE status END,
+                         filed_at = CASE WHEN status = 'draft' THEN $6::date::timestamptz ELSE filed_at END,
+                         due_at = GREATEST(COALESCE(due_at, $3::date), $3::date),
+                         outcome = CASE WHEN $4 > 1 THEN NULL ELSE outcome END, outcome_at = CASE WHEN $4 > 1 THEN NULL ELSE outcome_at END,
+                         method = $5
+      WHERE id = $1`,
+    [l.dispute_id, nextStatus, new Date(day.getTime() + waitDays * 86400000).toISOString().slice(0, 10), l.round, method === 'online' ? 'online' : 'mail', sentDate],
+  );
+}
+
+/** Member attaches a photo or scan: the signed letter, the certified receipt, the return receipt. */
+export async function attachProof(member, letterId, { kind, fileName, mimeType, dataBase64 }, actor) {
+  if (!PROOF_KINDS[kind]) throw new ValidationError('Pick what this proof is');
+  const { rows } = await query(`SELECT id, status, recipient_name, dispute_id FROM dispute_letters WHERE id = $1 AND member_id = $2 AND deleted_at IS NULL`, [letterId, member.id]);
+  const l = rows[0];
+  if (!l) throw new NotFoundError('Letter not found');
+  if (l.status !== 'sent') throw new ConflictError('Mark the letter sent first, then add the proof', 'letter_not_sent');
+  const doc = await saveDocument(member.id, { docType: 'mail_proof', fileName: fileName || `${kind}.jpg`, mimeType, dataBase64 }, actor);
+  await query(`INSERT INTO letter_proofs (letter_id, member_id, document_id, kind, source) VALUES ($1, $2, $3, $4, 'member')`, [letterId, member.id, doc.id, kind]);
+  await query(`INSERT INTO dispute_events (dispute_id, kind, text, meta) VALUES ($1, 'proof_added', $2, $3)`, [l.dispute_id, `You saved proof for the ${l.recipient_name} letter: ${PROOF_KINDS[kind].toLowerCase()}.`, JSON.stringify({ letterId, kind, documentId: doc.id })]);
+  await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'dispute.proof_added', entityType: 'dispute_letter', entityId: letterId, metadata: { kind, documentId: doc.id }, ...actor.reqMeta });
+  return getDispute(member, l.dispute_id);
+}
+
+/** Provider webhook or poll result lands here. Delivery proof becomes a record on the letter. */
+export async function applyMailStatus({ ref, status, trackingNumber, deliveredAt, proofOfDeliveryUrl }) {
+  if (!ref || !status) return { ok: false };
+  const { rows } = await query(`SELECT id, member_id, dispute_id, recipient_name, mail_status, tracking FROM dispute_letters WHERE mail_ref = $1 AND deleted_at IS NULL`, [ref]);
+  const l = rows[0];
+  if (!l) return { ok: false, reason: 'unknown_ref' };
+  if (l.mail_status === status && (!trackingNumber || trackingNumber === l.tracking)) return { ok: true, unchanged: true };
+  await query(`UPDATE dispute_letters SET mail_status = $2, tracking = COALESCE($3, tracking) WHERE id = $1`, [l.id, status, trackingNumber ?? null]);
+  const text = { printed: 'printed and handed to USPS', in_transit: 'in transit with USPS', delivered: 'delivered and signed for', returned: 'returned to sender. Check the address and send again', failed: 'not accepted by the mail service' }[status];
+  if (text) await query(`INSERT INTO dispute_events (dispute_id, kind, text, meta) VALUES ($1, 'mail_status', $2, $3)`, [l.dispute_id, `Your letter to ${l.recipient_name} was ${text}${deliveredAt ? ` on ${new Date(deliveredAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })}` : ''}.`, JSON.stringify({ status, trackingNumber, proofOfDeliveryUrl })]);
+  if (status === 'delivered' && proofOfDeliveryUrl) {
+    try {
+      const res = await fetch(proofOfDeliveryUrl);
+      if (res.ok) {
+        const buf = Buffer.from(await res.arrayBuffer());
+        const doc = await saveDocument(l.member_id, { docType: 'mail_proof', fileName: `return-receipt-${l.id.slice(0, 8)}.pdf`, mimeType: res.headers.get('content-type')?.split(';')[0] || 'application/pdf', dataBase64: buf.toString('base64') }, null);
+        await query(`INSERT INTO letter_proofs (letter_id, member_id, document_id, kind, source) VALUES ($1, $2, $3, 'return_receipt', 'provider')`, [l.id, l.member_id, doc.id]);
+      }
+    } catch { /* the event already records the URL; a retry lands on the next poll */ }
+  }
+  return { ok: true };
+}
+
+/** Housekeeping: poll pieces still moving when the provider has no webhook configured. */
+export async function syncMailStatuses() {
+  const { rows } = await query(`SELECT mail_ref FROM dispute_letters WHERE mail_ref IS NOT NULL AND mail_status IN ('queued','printed','in_transit') AND deleted_at IS NULL LIMIT 50`);
+  const adapter = getMailAdapter();
+  let n = 0;
+  for (const r of rows) {
+    try { const st = await adapter.status({ ref: r.mail_ref }); const out = await applyMailStatus({ ref: r.mail_ref, ...st }); if (out.ok && !out.unchanged) n += 1; } catch { /* next tick */ }
+  }
+  return n;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { healthcheck, closePool } from '../src/db/pool.js';
 import { REASONS, BUREAUS, bureauDispute, movRequest, furnisherDirect, debtValidation, cfpbComplaint } from '../src/credit/letters.js';
-import { nextStep } from '../src/services/dispute.service.js';
+import { nextStep, mailConsentText } from '../src/services/dispute.service.js';
+import { renderLetterPdf } from '../src/credit/letterPdf.js';
+import { pool } from '../src/db/pool.js';
 
 // DIY dispute workflow: Maren drafts, the member signs and sends, the system never files.
 
@@ -49,7 +51,11 @@ test('pure: next step follows the state machine', () => {
   assert.equal(nextStep(d, [{ round: 1, status: 'draft' }], head).code, 'review');
   assert.equal(nextStep(d, [{ round: 1, status: 'draft' }], { complete: false }).code, 'letterhead');
   assert.equal(nextStep(d, [{ round: 1, status: 'approved' }], head).code, 'send');
-  assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2999-01-01' }, [{ round: 1, status: 'sent' }], head).code, 'wait');
+  assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2999-01-01' }, [{ round: 1, status: 'sent', sent_method: 'online' }], head).code, 'wait');
+  // Fresh certified send without photos of the receipt: ask for the proof first.
+  assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2999-01-01', filed_at: new Date().toISOString() }, [{ round: 1, status: 'sent', sent_method: 'certified_mail', proofs: [] }], head).code, 'proof');
+  assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2999-01-01', filed_at: new Date().toISOString() }, [{ round: 1, status: 'sent', sent_method: 'certified_mail', proofs: [{ kind: 'signed_letter' }, { kind: 'certified_receipt' }] }], head).code, 'wait');
+  assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2999-01-01', filed_at: new Date().toISOString() }, [{ round: 1, status: 'sent', sent_method: 'mail_service', proofs: [{ kind: 'signed_letter', source: 'system' }] }], head).code, 'wait');
   assert.equal(nextStep({ status: 'filed', round: 1, due_at: '2000-01-01' }, [{ round: 1, status: 'sent' }], head).code, 'overdue');
   assert.equal(nextStep({ status: 'investigating', round: 1, outcome: 'verified' }, [{ round: 1, status: 'sent' }], head).code, 'escalate');
   assert.equal(nextStep({ status: 'resolved', outcome: 'deleted', round: 1 }, [], head).code, 'closed');
@@ -124,4 +130,77 @@ test('api: start -> letterhead -> sign -> sent -> verified -> MOV + furnisher ro
   assert.equal(list.cases.length, 1); assert.equal(list.cases[0].outcome, 'deleted');
   const legacy = await (await call('GET', '/api/credit/disputes', undefined, tok)).json();
   assert.ok(legacy.disputes.some((d) => d.id === c.dispute.id));
+});
+
+test('pure: mail consent names the price as pass-through and the member as author; PDF renders', async () => {
+  const t = mailConsentText({ amountCents: 1069, recipientName: 'Experian' });
+  assert.match(t, /\$10\.69/); assert.match(t, /no markup/); assert.match(t, /I wrote and approved this letter/); assert.doesNotMatch(t, /\bAI\b/);
+  const { pdf, pages } = await renderLetterPdf({ body: 'Dear Experian,\n\nPlease investigate.', signedName: 'Jo Path', signedAt: new Date() });
+  assert.equal(pdf.subarray(0, 4).toString(), '%PDF'); assert.equal(pages, 1);
+});
+
+test('api: mail it for me is off by default, charges at cost when on, files the copy; self-mail proofs attach', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const reg = await call('POST', '/api/auth/register', { name: 'Mail Path', email: uniq('mail'), phone: '5550001234', password: 'a-strong-password', consent: { terms: true, dataNeverSold: true } });
+  const { accessToken: tok } = await reg.json();
+  const memberToken = tok;
+  assert.equal((await call('POST', '/api/credit/pull', undefined, memberToken)).status, 201);
+  const ov = await (await call('GET', '/api/credit', undefined, memberToken)).json();
+  await call('PUT', '/api/credit/letterhead', { line1: '12 Oak St', city: 'Raleigh', state: 'NC', zip: '27601', dateOfBirth: '1988-02-14' }, memberToken);
+  const started = await (await call('POST', `/api/credit/items/${ov.disputable[0].id}/dispute`, { reasonCode: 'not_mine', bureaus: ['experian', 'equifax'] }, memberToken)).json();
+  const [l1, l2] = started.letters;
+  await call('POST', `/api/credit/letters/${l1.id}/sign`, { signedName: 'Mail Path' }, memberToken);
+  await call('POST', `/api/credit/letters/${l2.id}/sign`, { signedName: 'Mail Path' }, memberToken);
+
+  // Switch off: quote says so, mailing refused.
+  await pool.query(`UPDATE billing_settings SET value = value || '{"enabled": false}' WHERE key = 'mail_service'`);
+  let q = await (await call('GET', `/api/credit/letters/${l1.id}/mail-quote`, undefined, memberToken)).json();
+  assert.equal(q.canMail, false); assert.ok(q.amountCents > 900, 'certified with ERR is around ten dollars');
+  assert.equal((await call('POST', `/api/credit/letters/${l1.id}/mail`, { consentAccepted: true, paymentMethodToken: 'pm_mock_4242' }, memberToken)).status, 409);
+
+  // Switch on: consent required, then charged at the quoted price and marked sent with a system copy on file.
+  await pool.query(`UPDATE billing_settings SET value = value || '{"enabled": true}' WHERE key = 'mail_service'`);
+  try {
+    q = await (await call('GET', `/api/credit/letters/${l1.id}/mail-quote`, undefined, memberToken)).json();
+    assert.equal(q.canMail, true);
+    assert.equal((await call('POST', `/api/credit/letters/${l1.id}/mail`, { consentAccepted: false, paymentMethodToken: 'pm_mock_4242' }, memberToken)).status, 422);
+    assert.equal((await call('POST', `/api/credit/letters/${l1.id}/mail`, { consentAccepted: true, paymentMethodToken: 'pm_mock_declined' }, memberToken)).status, 422);
+    const r = await call('POST', `/api/credit/letters/${l1.id}/mail`, { consentAccepted: true, paymentMethodToken: 'pm_mock_4242' }, memberToken);
+    assert.equal(r.status, 200);
+    const c = await r.json();
+    const m = c.letters.find((x) => x.id === l1.id);
+    assert.equal(m.status, 'sent'); assert.equal(m.sent_method, 'mail_service'); assert.equal(m.mail_provider, 'mock'); assert.equal(m.mail_cost_cents, q.amountCents);
+    assert.ok(m.tracking, 'tracking number recorded');
+    assert.deepEqual(m.proofs.map((p) => [p.kind, p.source]), [['signed_letter', 'system']]);
+    assert.deepEqual(m.proofsMissing, []);
+    assert.equal(c.dispute.status, 'filed');
+    const { rows: pay } = await pool.query(`SELECT kind, amount_cents, status FROM payments WHERE id = (SELECT payment_id FROM dispute_letters WHERE id = $1)`, [l1.id]);
+    assert.deepEqual(pay[0], { kind: 'mail', amount_cents: q.amountCents, status: 'succeeded' });
+    assert.equal((await call('POST', `/api/credit/letters/${l1.id}/mail`, { consentAccepted: true }, memberToken)).status, 409, 'cannot mail twice');
+
+    // Provider says delivered: status and event land on the letter.
+    const wh = await fetch(`${base}/api/credit/mail-webhook`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ref: m.mail_ref ?? `mail_mock_${l1.id.slice(0, 8)}`, status: 'delivered', deliveredAt: new Date().toISOString() }) });
+    assert.equal(wh.status, 200);
+    const c2 = await (await call('GET', `/api/credit/cases/${c.dispute.id}`, undefined, memberToken)).json();
+    assert.equal(c2.letters.find((x) => x.id === l1.id).mail_status, 'delivered');
+    assert.ok(c2.events.some((e) => e.kind === 'mail_status' && /delivered/.test(e.text)));
+  } finally {
+    await pool.query(`UPDATE billing_settings SET value = value || '{"enabled": false}' WHERE key = 'mail_service'`);
+  }
+
+  // Self-mailed certified: proof is owed until the member photographs the letter and the receipt.
+  assert.equal((await call('POST', `/api/credit/letters/${l2.id}/proofs`, { kind: 'signed_letter', mimeType: 'image/jpeg', dataBase64: Buffer.from('jpegbytes').toString('base64') }, memberToken)).status, 409, 'not sent yet');
+  let c3 = await (await call('POST', `/api/credit/letters/${l2.id}/sent`, { method: 'certified_mail', tracking: '9407 1111 2222 3333 4444 55' }, memberToken)).json();
+  let s2 = c3.letters.find((x) => x.id === l2.id);
+  assert.deepEqual(s2.proofsMissing, ['signed_letter', 'certified_receipt']);
+  assert.equal(c3.next.code, 'proof');
+  assert.equal((await call('POST', `/api/credit/letters/${l2.id}/proofs`, { kind: 'nope', mimeType: 'image/jpeg', dataBase64: 'aGk=' }, memberToken)).status, 422);
+  c3 = await (await call('POST', `/api/credit/letters/${l2.id}/proofs`, { kind: 'signed_letter', fileName: 'letter.jpg', mimeType: 'image/jpeg', dataBase64: Buffer.from('jpegbytes').toString('base64') }, memberToken)).json();
+  c3 = await (await call('POST', `/api/credit/letters/${l2.id}/proofs`, { kind: 'certified_receipt', fileName: 'receipt.jpg', mimeType: 'image/jpeg', dataBase64: Buffer.from('jpegbytes').toString('base64') }, memberToken)).json();
+  s2 = c3.letters.find((x) => x.id === l2.id);
+  assert.deepEqual(s2.proofsMissing, []);
+  assert.equal(s2.proofs.length, 2);
+  assert.equal(c3.next.code, 'wait');
+  const { rows: docs } = await pool.query(`SELECT doc_type FROM member_documents WHERE id = ANY($1::uuid[]) ORDER BY doc_type`, [s2.proofs.map((p) => p.documentId)]);
+  assert.deepEqual(docs.map((d) => d.doc_type), ['mail_proof', 'mail_proof']);
 });

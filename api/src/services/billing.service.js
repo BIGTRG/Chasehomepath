@@ -325,6 +325,34 @@ export async function bookSession(member, { type, scheduledAt, topic, topicCode,
   return sessionView(session);
 }
 
+/**
+ * One-off charge for a priced add-on (mail service, etc). Card or bank on file when the
+ * member has a plan; otherwise a payment token is required. Records the payment row and
+ * returns it. Throws ValidationError('card_declined') on failure after recording it.
+ */
+export async function chargeOnce(member, { kind, amountCents, description, paymentMethodToken, metadata }, db = query) {
+  const sub = await liveSubscription(member.id);
+  const processor = getPaymentAdapter();
+  let customerId = sub?.processor_customer_id ?? null;
+  let paymentMethodId = null;
+  if (sub?.processor_subscription_id && !paymentMethodToken) {
+    paymentMethodId = await defaultPaymentMethod(processor, sub);
+  } else {
+    if (!paymentMethodToken) throw new ValidationError('A payment method is required', { code: 'payment_method_required' });
+    if (!customerId) ({ customerId } = await processor.createCustomer({ email: member.email, name: member.name, memberId: member.id }));
+    ({ paymentMethodId } = await processor.attachPaymentMethod({ customerId, paymentMethodToken }));
+  }
+  const charge = await processor.charge({ customerId, paymentMethodId, amountCents, description, metadata: { memberId: member.id, kind, ...(metadata ?? {}) } });
+  const ok = charge.status === 'succeeded';
+  const { rows } = await db(
+    `INSERT INTO payments (member_id, subscription_id, kind, amount_cents, status, description, processor, processor_ref, failure_reason)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, amount_cents, status`,
+    [member.id, sub?.id ?? null, kind, amountCents, ok ? 'succeeded' : 'failed', description, processor.name, charge.chargeRef ?? null, ok ? null : (charge.failureReason ?? 'declined')],
+  );
+  if (!ok) throw new ValidationError('Your payment was declined. Try another card.', { code: 'card_declined' });
+  return rows[0];
+}
+
 async function defaultPaymentMethod(processor, sub) {
   // Stripe charges the customer's default method when payment_method is omitted; the
   // mock needs an id but never declines a stored method. Keep the seam explicit.

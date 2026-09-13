@@ -26,8 +26,9 @@ export function createApp() {
   );
   // Camera-captured document uploads arrive as base64 JSON (8 MB file cap → ~11 MB encoded).
   app.use('/api/intake/documents', express.json({ limit: '12mb' }));
+  app.use('/api/credit/letters/:letterId/proofs', express.json({ limit: '12mb' }));
   // Billing webhook keeps its raw body for signature verification (see billing.routes).
-  app.use((req, res, next) => (req.path === '/api/billing/webhook' ? next() : express.json({ limit: '1mb' })(req, res, next)));
+  app.use((req, res, next) => (req.path === '/api/billing/webhook' || req.path === '/api/credit/mail-webhook' ? next() : express.json({ limit: '1mb' })(req, res, next)));
   app.use(cookieParser());
 
   if (!env.isTest) {
