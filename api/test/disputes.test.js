@@ -102,6 +102,7 @@ test('api: start -> letterhead -> sign -> sent -> verified -> MOV + furnisher ro
   assert.equal(c.dispute.dueAt.slice(0, 10), '2026-08-05', 'a later online send (shorter wait) never shortens the clock');
   assert.equal((await call('PUT', `/api/credit/letters/${l1.id}`, { body: 'x'.repeat(100) }, tok)).status, 409, 'sent letters are frozen');
   assert.equal(c.next.code, 'overdue', 'clock ran out in test time');
+  assert.ok(c.dispute.dayCount > 60, 'day count runs from the send date');
 
   // Escalation path.
   assert.equal((await call('POST', `/api/credit/cases/${c.dispute.id}/next`, { kind: 'mov_request' }, tok)).status, 409, 'MOV needs a verified answer first');

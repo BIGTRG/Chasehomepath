@@ -237,12 +237,12 @@ export async function markSent(member, letterId, { method, sentOn, tracking }, a
     // First send opens the clock; later sends never shorten it.
     await db(
       `UPDATE disputes SET status = CASE WHEN status IN ('draft','filed','investigating') THEN $2 ELSE status END,
-                           filed_at = CASE WHEN status = 'draft' THEN now() ELSE filed_at END,
+                           filed_at = CASE WHEN status = 'draft' THEN $6::date::timestamptz ELSE filed_at END,
                            due_at = GREATEST(COALESCE(due_at, $3::date), $3::date),
                            outcome = CASE WHEN $4 > 1 THEN NULL ELSE outcome END, outcome_at = CASE WHEN $4 > 1 THEN NULL ELSE outcome_at END,
                            method = $5
         WHERE id = $1`,
-      [l.dispute_id, nextStatus, new Date(day.getTime() + waitDays * 86400000).toISOString().slice(0, 10), l.round, method === 'online' ? 'online' : 'mail'],
+      [l.dispute_id, nextStatus, new Date(day.getTime() + waitDays * 86400000).toISOString().slice(0, 10), l.round, method === 'online' ? 'online' : 'mail', sentDate],
     );
     await db(`INSERT INTO dispute_events (dispute_id, kind, text, meta) VALUES ($1, 'letter_sent', $2, $3)`,
       [l.dispute_id, `You sent the letter to ${l.recipient_name} by ${method.replace('_', ' ')}${tracking ? ` (tracking ${tracking.trim()})` : ''}.`, JSON.stringify({ letterId, method, sentOn: sentDate })]);
