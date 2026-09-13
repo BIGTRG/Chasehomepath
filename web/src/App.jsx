@@ -24,6 +24,8 @@ import Credit from './screens/Credit.jsx';
 import CreditItem from './screens/CreditItem.jsx';
 import Disputes from './screens/Disputes.jsx';
 import Money from './screens/Money.jsx';
+import BudgetSetup from './screens/BudgetSetup.jsx';
+import ScoreTrend from './screens/ScoreTrend.jsx';
 import Team from './screens/Team.jsx';
 import Learn from './screens/Learn.jsx';
 import Marketplace from './screens/Marketplace.jsx';
@@ -94,6 +96,8 @@ function MemberSurface() {
           <Route path="/credit" element={<Credit />} />
           <Route path="/credit/items/:id" element={<CreditItem />} />
           <Route path="/money" element={<Money />} />
+          <Route path="/money/setup" element={<BudgetSetup />} />
+          <Route path="/credit/scores" element={<ScoreTrend />} />
           <Route path="/team" element={<Team />} />
           <Route path="/learn" element={<Learn />} />
           <Route path="/learn/:moduleId" element={<Lesson />} />

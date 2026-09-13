@@ -105,6 +105,8 @@ export const credit = {
     api(`/credit/items/${id}/dispute`, { method: 'POST', body: { method } }),
   withdraw: (id) => api(`/credit/disputes/${id}/withdraw`, { method: 'POST' }),
   disputes: () => api('/credit/disputes'),
+  scores: () => api('/credit/scores'),
+  recordScores: (body) => api('/credit/scores', { method: 'POST', body }),
 };
 
 export const money = {
@@ -114,6 +116,9 @@ export const money = {
   setBudget: (category, monthlyTarget) =>
     api('/money/budgets', { method: 'PUT', body: { category, monthlyTarget } }),
   saveGoal: (goal) => api('/money/savings', { method: 'PUT', body: goal }),
+  budgetProposal: () => api('/money/budget/proposal'),
+  budgetSetup: (body) => api('/money/budget/setup', { method: 'POST', body }),
+  transactions: () => api('/money/transactions'),
 };
 
 export const team = {

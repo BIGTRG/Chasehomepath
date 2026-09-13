@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { credit as creditApi } from '../api/client.js';
+import { ScoreChart } from './ScoreTrend.jsx';
 import ScreenTop from '../components/ScreenTop.jsx';
 
 // Walkthrough screen 7: items split into "Look inaccurate" vs "Accurate". The accurate
 // ones get honest advice, not filler disputes. Score withheld until first meeting. (§4.8, §8)
 export default function Credit() {
   const [data, setData] = useState(null);
+  const [hist, setHist] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function load() {
     try {
       setData(await creditApi.overview());
+      creditApi.scores().then(setHist).catch(() => {});
     } catch (err) {
       setError(err.message);
     }
@@ -71,10 +74,14 @@ export default function Credit() {
       <a href="/smartcredit" className="card hl" style={{ display: "block", textDecoration: "none", color: "inherit", textAlign: "center", padding: "16px" }}><div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange-dark)" }}>SmartCredit&reg; Monitoring</div><div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>3-Bureau reports &amp; scores &mdash; $1 trial</div><div style={{ fontSize: 12, color: "var(--orange-dark)", fontWeight: 600, marginTop: 8 }}>Learn more &rsaquo;</div></a>
       {/* Score is withheld until the first consultation (spec §8). */}
       {!data.score.withheld && (
-        <div className="card score-card">
-          <div className="score-num">{data.score.value ?? '—'}</div>
-          <div className="score-note">Reviewed with your specialist.</div>
-        </div>
+        <Link to="/credit/scores" className="card score-card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+          <div className="brow" style={{ alignItems: 'flex-end' }}>
+            <div><div className="score-num">{hist?.latest ?? data.score.value ?? '—'}</div><div className="score-note">Today{hist?.monitoring ? ' · monitored with SmartCredit' : ''}</div></div>
+            {hist && hist.points.length > 1 && <span className={`pill ${hist.change > 0 ? 'g' : hist.change === 0 ? 'n' : 'w'}`}>{hist.change > 0 ? '+' : ''}{hist.change} since start</span>}
+          </div>
+          {hist && hist.points.length > 0 && <ScoreChart points={hist.points} height={110} />}
+          <div className="s" style={{ color: 'var(--orange-dark)', fontWeight: 600 }}>Score over time and this month's readings ›</div>
+        </Link>
       )}
 
       <div className="lbl">Look inaccurate — {data.disputable.length}</div>

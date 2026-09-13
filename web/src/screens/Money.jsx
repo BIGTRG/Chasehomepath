@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { money as moneyApi, credit as creditApi } from '../api/client.js';
 import ScreenTop from '../components/ScreenTop.jsx';
 
@@ -10,7 +11,6 @@ export default function Money() {
   const [data, setData] = useState(null);
   const [disputes, setDisputes] = useState([]);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
 
   async function load() {
     try {
@@ -22,21 +22,6 @@ export default function Money() {
     }
   }
   useEffect(() => { load(); }, []);
-
-  async function linkAndSync() {
-    setBusy(true);
-    setError(null);
-    try {
-      // In production the publicToken comes from Plaid Link; the mock accepts any string.
-      await moneyApi.link('public-mock-token');
-      await moneyApi.sync();
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (error) return <div className="content"><div className="error">{error}</div></div>;
   if (!data) return <div className="loading">Loading…</div>;
@@ -58,22 +43,37 @@ export default function Money() {
             Link your bank to see spending, set budgets, and get specific coaching. Your
             connection is encrypted and your data is never sold.
           </p>
-          <button className="btn" onClick={linkAndSync} disabled={busy}>
-            {busy ? 'Linking…' : 'Link my bank'}
-          </button>
+          <Link to="/money/setup" className="btn">Link my bank and set my budget</Link>
         </div>
       ) : (
         <>
-          <div className="mrow">
+          {!data.budgetSetup && (
+            <div className="card hl">
+              <div className="n">Set up your budget</div>
+              <div className="s">Built from your own bank activity in about two minutes. You approve every line.</div>
+              <Link to="/money/setup" className="btn" style={{ marginTop: 10 }}>Build my budget</Link>
+            </div>
+          )}
+          <div className="mrow" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div className="m">
+              <div className="ml">In</div>
+              <div className="mv">{usd(data.month.income)}</div>
+            </div>
             <div className="m">
               <div className="ml">Spent</div>
               <div className="mv">{usd(data.month.spend)}</div>
             </div>
             <div className="m">
-              <div className="ml">Saved to home</div>
-              <div className="mv g">{usd(savedToHome)}</div>
+              <div className="ml">Left</div>
+              <div className={`mv ${data.month.net >= 0 ? 'g' : ''}`}>{usd(data.month.net)}</div>
             </div>
           </div>
+          {data.toHome != null && (
+            <div className="card gl">
+              <div className="brow"><span className="bl">To your home each month</span><span className="bv">{usd(data.toHome)}</span></div>
+              <div className="s">Saved so far: {usd(savedToHome)} · <Link to="/money/setup" className="link-orange">Edit budget</Link></div>
+            </div>
+          )}
 
           {data.budgets.length > 0 && (
             <div className="card">
@@ -83,7 +83,7 @@ export default function Money() {
                 return (
                   <div key={b.id} style={{ marginBottom: 12 }}>
                     <div className="brow">
-                      <span className="bl">{b.category}</span>
+                      <span className="bl">{b.label ?? b.category}</span>
                       <span className={`bv ${over ? 'over' : ''}`}>
                         {usd(b.actual)}{over ? ' · over' : ''}
                       </span>
@@ -116,6 +116,20 @@ export default function Money() {
               })}
             </>
           )}
+        </>
+      )}
+
+      {data.linked && data.recent?.length > 0 && (
+        <>
+          <div className="lbl">Recent activity</div>
+          <div className="card list">
+            {data.recent.map((t) => (
+              <div className="row" key={t.id}>
+                <div className="grow"><div className="n">{t.merchant}</div><div className="s">{t.label} · {new Date(`${String(t.date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div></div>
+                <span className={`bv ${t.category === 'income' ? 'g' : ''}`}>{t.category === 'income' ? '+' : '-'}{usd(t.amount)}</span>
+              </div>
+            ))}
+          </div>
         </>
       )}
 

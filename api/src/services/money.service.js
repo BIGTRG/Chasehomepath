@@ -84,8 +84,8 @@ async function currentMonthSpendByCategory(memberId) {
 
 export async function getBudgets(memberId) {
   const { rows } = await query(
-    `SELECT id, category, monthly_target FROM budget_targets
-      WHERE member_id = $1 AND deleted_at IS NULL ORDER BY category`,
+    `SELECT id, category, monthly_target, kind FROM budget_targets
+      WHERE member_id = $1 AND deleted_at IS NULL ORDER BY monthly_target DESC`,
     [memberId],
   );
   const spend = await currentMonthSpendByCategory(memberId);
@@ -160,9 +160,16 @@ export async function getMoneyOverview(member) {
     [member.id],
   );
 
-  const coaching = buildCoaching(budgets, savings);
+  const spendBudgets = budgets.filter((b) => b.kind !== 'save').map((b) => ({ ...b, label: categoryLabel(b.category) }));
+  const toHome = budgets.find((b) => b.kind === 'save');
+  const coaching = buildCoaching(spendBudgets, savings);
+  const { rows: setup } = await query(`SELECT budget_setup_at FROM members WHERE id = $1`, [member.id]);
+  const recent = await recentTransactions(member.id, 12);
 
   return {
+    budgetSetup: Boolean(setup[0]?.budget_setup_at),
+    toHome: toHome ? Number(toHome.monthly_target) : null,
+    recent,
     linked: links.length > 0,
     institutions: links.map((l) => l.institution),
     month: {
@@ -170,8 +177,103 @@ export async function getMoneyOverview(member) {
       spend: Number(monthly[0].spend),
       net: Number(monthly[0].income) - Number(monthly[0].spend),
     },
-    budgets,
+    budgets: spendBudgets,
     savings: savings.map((s) => ({ ...s, target_amount: Number(s.target_amount), current_amount: Number(s.current_amount) })),
     coaching,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Budget setup (Deon 2026-09-13): bank first, then a proposed budget built from the
+// member's own transactions, edited and approved by the member, with a "to your home"
+// savings line wired to the down-payment goal.
+// ---------------------------------------------------------------------------
+const DISCRETIONARY = new Set(['dining', 'shopping', 'entertainment', 'subscriptions', 'personal']);
+const FIXED = new Set(['housing', 'utilities', 'insurance', 'debt', 'loans', 'credit_cards', 'childcare', 'transport', 'phone']);
+const LABELS = { housing: 'Rent or mortgage', utilities: 'Utilities', groceries: 'Groceries', dining: 'Eating out', transport: 'Transportation', shopping: 'Shopping', entertainment: 'Entertainment', subscriptions: 'Subscriptions', insurance: 'Insurance', phone: 'Phone and internet', childcare: 'Childcare', debt: 'Debt payments', credit_cards: 'Credit cards', loans: 'Loans', personal: 'Personal', health: 'Health', other: 'Everything else' };
+export const categoryLabel = (c) => LABELS[c] ?? c.replace(/_/g, ' ').replace(/^./, (m) => m.toUpperCase());
+const round5 = (n) => Math.max(0, Math.round(n / 5) * 5);
+
+/** Average monthly spend by category over the last 90 days (or fewer, if less history). */
+async function trailingMonthlyByCategory(memberId) {
+  const { rows } = await query(
+    `SELECT category, SUM(amount)::numeric(14,2) AS total,
+            GREATEST(1, LEAST(3, COUNT(DISTINCT date_trunc('month', date)))) AS months
+       FROM transactions
+      WHERE member_id = $1 AND deleted_at IS NULL AND date >= CURRENT_DATE - INTERVAL '90 days'
+      GROUP BY category`,
+    [memberId],
+  );
+  return rows.map((r) => ({ category: r.category, monthly: Number(r.total) / Number(r.months) }));
+}
+
+/**
+ * Propose a budget from the member's own bank data plus their stated income.
+ * Fixed lines are kept at actual; discretionary lines are trimmed 15%; the balance
+ * becomes the "to your home" savings line. Nothing here is a promise: it is a
+ * starting point the member edits.
+ */
+export async function proposeBudget(member) {
+  const [rows, intake, links] = await Promise.all([
+    trailingMonthlyByCategory(member.id),
+    query(`SELECT household_income FROM intake_profiles WHERE member_id = $1 AND deleted_at IS NULL`, [member.id]).then((r) => r.rows[0] ?? null),
+    query(`SELECT institution FROM bank_links WHERE member_id = $1 AND status = 'active' AND deleted_at IS NULL`, [member.id]).then((r) => r.rows),
+  ]);
+  const bankIncome = rows.find((r) => r.category === 'income')?.monthly ?? 0;
+  const statedIncome = intake?.household_income ? Number(intake.household_income) / 12 : 0;
+  // Take-home from the bank is the truth when we have it; stated income is gross, so fall back to 78%.
+  const monthlyIncome = bankIncome > 0 ? bankIncome : Math.round(statedIncome * 0.78);
+
+  const lines = rows.filter((r) => r.category !== 'income' && r.monthly >= 5).map((r) => {
+    const trim = DISCRETIONARY.has(r.category) ? 0.85 : 1;
+    return { category: r.category, label: categoryLabel(r.category), actual: Math.round(r.monthly), monthlyTarget: round5(r.monthly * trim), fixed: FIXED.has(r.category), trimmed: trim < 1 };
+  }).sort((a, b) => b.actual - a.actual);
+  const spendTotal = lines.reduce((a, l) => a + l.monthlyTarget, 0);
+  const toHome = Math.max(0, round5(monthlyIncome - spendTotal));
+
+  return {
+    linked: links.length > 0,
+    institutions: links.map((l) => l.institution),
+    monthlyIncome: Math.round(monthlyIncome),
+    incomeSource: bankIncome > 0 ? 'bank' : statedIncome > 0 ? 'stated' : 'none',
+    lines,
+    toHome,
+    note: lines.length === 0
+      ? 'No transactions yet. Link your bank and sync, or enter your own numbers below.'
+      : `Built from your last ${Math.min(3, Math.max(1, rows.length ? 3 : 1))} months of bank activity. Eating out, shopping, and entertainment are trimmed 15 percent; everything else is left at what you actually spend. Change any line.`,
+  };
+}
+
+/** Save the whole budget in one go and record the setup. Replaces existing spend lines. */
+export async function setupBudget(member, { lines, toHome, downPaymentTarget }, actor) {
+  return withTransaction(async (db) => {
+    await db(`UPDATE budget_targets SET deleted_at = now() WHERE member_id = $1 AND deleted_at IS NULL`, [member.id]);
+    for (const l of lines) {
+      await db(
+        `INSERT INTO budget_targets (member_id, category, monthly_target, kind) VALUES ($1, $2, $3, 'spend')`,
+        [member.id, l.category, l.monthlyTarget],
+      );
+    }
+    await db(`INSERT INTO budget_targets (member_id, category, monthly_target, kind) VALUES ($1, 'to_home', $2, 'save')`, [member.id, toHome ?? 0]);
+    // One down-payment goal; create or retarget it.
+    const { rows: goals } = await db(`SELECT id FROM savings_goals WHERE member_id = $1 AND deleted_at IS NULL AND label = 'Down payment and closing' LIMIT 1`, [member.id]);
+    if (goals[0]) {
+      if (downPaymentTarget != null) await db(`UPDATE savings_goals SET target_amount = $2 WHERE id = $1`, [goals[0].id, downPaymentTarget]);
+    } else {
+      await db(`INSERT INTO savings_goals (member_id, label, target_amount, current_amount) VALUES ($1, 'Down payment and closing', $2, 0)`, [member.id, downPaymentTarget ?? 0]);
+    }
+    await db(`UPDATE members SET budget_setup_at = now() WHERE id = $1`, [member.id]);
+    await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'budget.setup', entityType: 'member', entityId: member.id, metadata: { lines: lines.length, toHome }, ...actor.reqMeta }, db);
+    return { ok: true, lines: lines.length, toHome };
+  });
+}
+
+/** Recent transactions for the member (newest first). */
+export async function recentTransactions(memberId, limit = 30) {
+  const { rows } = await query(
+    `SELECT id, date, amount, category, merchant FROM transactions
+      WHERE member_id = $1 AND deleted_at IS NULL ORDER BY date DESC, created_at DESC LIMIT $2`,
+    [memberId, limit],
+  );
+  return rows.map((r) => ({ ...r, amount: Number(r.amount), label: categoryLabel(r.category) }));
 }

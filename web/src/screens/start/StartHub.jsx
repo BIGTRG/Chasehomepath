@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { journey as journeyApi } from '../../api/client.js';
 
-const ROUTE = { credit: '/start/credit', docs: '/start/docs', book: '/start/book', meeting: '/start/book', training: '/start/training', done: '/' };
+const ROUTE = { credit: '/start/credit', docs: '/start/docs', book: '/start/book', meeting: '/start/book', training: '/start/training', budget: '/money/setup', done: '/' };
 
 // Onboarding v2 hub: six steps, status derived from the file. Lands on the current step.
 export default function StartHub() {
@@ -20,7 +20,7 @@ export default function StartHub() {
     <div className="content">
       <img src="/logo.png" alt="CHASE HomePath" className="auth-logo sm" style={{ margin: '4px auto 14px' }} />
       <h1 className="h1">Your first day</h1>
-      <p className="sub">Six short steps to a plan. Pick up where you left off.</p>
+      <p className="sub">Seven short steps to a plan. Pick up where you left off.</p>
 
       <div className="card list">
         {s.steps.map((st, i) => (

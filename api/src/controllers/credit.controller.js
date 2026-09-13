@@ -51,3 +51,20 @@ export async function listDisputes(req, res) {
   const member = await requireMemberByUserId(req.user.id);
   res.json({ disputes: await credit.listDisputes(member) });
 }
+
+export async function scoreHistory(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await credit.getScoreHistory(member));
+}
+
+const scoresSchema = z.object({
+  experian: z.number().int().min(300).max(850).optional(),
+  equifax: z.number().int().min(300).max(850).optional(),
+  transunion: z.number().int().min(300).max(850).optional(),
+  asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+export async function recordScores(req, res) {
+  const body = scoresSchema.parse(req.body);
+  const member = await requireMemberByUserId(req.user.id);
+  res.status(201).json(await credit.recordScores(member, body, actorFrom(req)));
+}

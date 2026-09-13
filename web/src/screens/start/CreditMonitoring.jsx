@@ -27,7 +27,7 @@ export default function CreditMonitoring() {
 
   return (
     <div className="content">
-      <ScreenTop title="Credit monitoring" sub="Step 2 of 6" />
+      <ScreenTop title="Credit monitoring" sub="Step 2 of 7" />
       <div className="card hl">
         <div className="n">Why this comes first</div>
         <p className="s" style={{ margin: '4px 0 0', lineHeight: 1.5 }}>Your three-bureau report and scores flow into your plan and update every month. {COUNSELOR.name} reads every line so you never have to. We hold the review until your meeting; you will see it explained, not dumped on you.</p>

@@ -35,7 +35,7 @@ export default function Book() {
 
   return (
     <div className="content">
-      <ScreenTop title="Book your meeting" sub="Step 4 of 6, about 20 minutes" />
+      <ScreenTop title="Book your meeting" sub="Step 4 of 7, about 20 minutes" />
       {error && <div className="error">{error}</div>}
       {gate && !gate.complete && <div className="note">Finish your documents first so your counselor has your full file. <button type="button" className="link" style={{ background: 'none', border: 0, font: 'inherit', padding: 0 }} onClick={() => navigate('/start/docs')}>Back to documents</button></div>}
 

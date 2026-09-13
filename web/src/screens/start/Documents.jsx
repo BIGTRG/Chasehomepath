@@ -55,7 +55,7 @@ export default function Documents() {
 
   return (
     <div className="content">
-      <ScreenTop title="Upload everything" sub={`Step 3 of 6, ${pct}% done`} />
+      <ScreenTop title="Upload everything" sub={`Step 3 of 7, ${pct}% done`} />
       <div className="bar" style={{ marginBottom: 14 }}><span style={{ width: `${pct}%` }} /></div>
       <p className="s" style={{ marginTop: 0, lineHeight: 1.5 }}>While you upload, the engine reads your credit, income, and debts and checks FHA, USDA, VA, conventional, credit-union, and assistance programs, so {COUNSELOR.name} opens your meeting with where you stand.</p>
       {error && <div className="error">{error}</div>}

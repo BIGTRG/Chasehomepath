@@ -12,6 +12,8 @@ router.use(authenticate, authorize('member'));
 router.post('/pull', asyncHandler(credit.pull));
 router.get('/', asyncHandler(credit.overview));
 router.get('/disputes', asyncHandler(credit.listDisputes));
+router.get('/scores', asyncHandler(credit.scoreHistory));
+router.post('/scores', asyncHandler(credit.recordScores));
 router.get('/items/:id', asyncHandler(credit.itemDetail));
 router.post('/items/:id/dispute', asyncHandler(credit.fileDispute));
 router.post('/disputes/:id/withdraw', asyncHandler(credit.withdrawDispute));

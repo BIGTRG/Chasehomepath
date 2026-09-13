@@ -98,6 +98,7 @@ export const env = {
     anthropic: optional('ANTHROPIC_ADAPTER', 'mock'),
     payment: optional('PAYMENT_ADAPTER', 'mock'),
     paymentReporting: optional('PAYMENT_REPORTING_ADAPTER', 'mock'),
+    creditMonitoring: optional('CREDIT_MONITORING_ADAPTER', 'mock'),
   },
 
   payments: {

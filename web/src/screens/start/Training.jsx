@@ -27,7 +27,7 @@ export default function Training() {
   }
   async function approve() {
     setBusy(true); setError(null);
-    try { await journeyApi.approve(); await load(); navigate('/'); } catch (e) { setError(e.message); } finally { setBusy(false); }
+    try { await journeyApi.approve(); await load(); navigate('/money/setup'); } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
   if (error && !sched) return <div className="content"><div className="error">{error}</div></div>;
@@ -37,7 +37,7 @@ export default function Training() {
 
   return (
     <div className="content">
-      <ScreenTop title="Your training schedule" sub="Step 6 of 6" right={<Link className="link" to="/">Plan</Link>} />
+      <ScreenTop title="Your training schedule" sub="Step 6 of 7" right={<Link className="link" to="/">Plan</Link>} />
       <p className="s" style={{ marginTop: 0, lineHeight: 1.5 }}>Lessons run on a schedule, not whenever. Pick your days and time, approve the calendar, and we alert you when each lesson starts. Each one is 8 to 20 minutes and ends with a three-question check you need to pass.</p>
       {error && <div className="error">{error}</div>}
 

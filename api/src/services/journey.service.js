@@ -10,7 +10,7 @@ import { listPlans } from './billing.service.js';
 import { checkCopy } from '../compliance/copyGate.js';
 
 /**
- * Onboarding v2 (Deon, 2026-09-12 23:39). Six steps to a paid plan:
+ * Onboarding v2 (Deon, 2026-09-12 23:39). Seven steps to a paid plan:
  *   1 account (done at register)  2 credit monitoring  3 documents
  *   4 book (Maren now, or a person)  5 meeting -> plan + pay  6 plan + training
  * Status is derived from data, never stored, so it cannot drift.
@@ -20,7 +20,7 @@ import { checkCopy } from '../compliance/copyGate.js';
 const REQUIRED_DOCS = new Set(['photo_id', 'pay_stub_1', 'pay_stub_2', 'w2_1', 'w2_2', 'tax_return_1', 'tax_return_2', 'employment', 'bank_link']);
 
 export async function journeyStatus(member) {
-  const [intake, checklist, enroll, appt, sub, meeting, training] = await Promise.all([
+  const [intake, checklist, enroll, appt, sub, meeting, training, bank] = await Promise.all([
     getIntake(member.id),
     getChecklist(member.id),
     query(`SELECT status, provider, enrolled_at FROM credit_monitoring_enrollments WHERE member_id = $1`, [member.id]).then((r) => r.rows[0] ?? null),
@@ -30,6 +30,7 @@ export async function journeyStatus(member) {
     query(`SELECT plan_code, status FROM subscriptions WHERE member_id = $1 AND status <> 'cancelled' AND deleted_at IS NULL LIMIT 1`, [member.id]).then((r) => r.rows[0] ?? null),
     query(`SELECT id, status FROM virtual_meetings WHERE member_id = $1 ORDER BY started_at DESC LIMIT 1`, [member.id]).then((r) => r.rows[0] ?? null),
     query(`SELECT count(*)::int AS n FROM training_sessions WHERE member_id = $1 AND status IN ('approved','passed','failed') AND deleted_at IS NULL`, [member.id]).then((r) => r.rows[0].n),
+    query(`SELECT (SELECT count(*)::int FROM bank_links WHERE member_id = $1 AND status = 'active' AND deleted_at IS NULL) AS links, budget_setup_at FROM members WHERE id = $1`, [member.id]).then((r) => r.rows[0]),
   ]);
 
   const required = checklist.items.filter((i) => REQUIRED_DOCS.has(i.docType));
@@ -44,6 +45,7 @@ export async function journeyStatus(member) {
     { key: 'book', title: 'Book your meeting', done: Boolean(appt), detail: appt ? (appt.counselor_kind === 'virtual' ? `With ${COUNSELOR.name}` : `${appt.type === 'in_person' ? 'In office' : 'Video'} with a specialist`) : `${COUNSELOR.name} now, or a person` },
     { key: 'meeting', title: 'Your meeting and plan choice', done: Boolean(sub) && consultDone, detail: sub ? 'Plan started' : consultDone ? 'Choose your plan' : 'Credit, where you stand, your two best plans' },
     { key: 'training', title: 'Training scheduled', done: training > 0, detail: training > 0 ? `${training} lessons on your calendar` : 'Short lessons at times you approve' },
+    { key: 'budget', title: 'Bank and budget', done: Boolean(bank?.budget_setup_at), detail: bank?.budget_setup_at ? 'Budget wired to your bank' : bank?.links > 0 ? 'Bank linked, set your budget' : 'Link your bank, approve a budget built from it' },
   ];
   const currentIndex = steps.findIndex((s) => !s.done);
   return {

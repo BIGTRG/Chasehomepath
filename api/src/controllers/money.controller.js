@@ -48,3 +48,24 @@ export async function saveGoal(req, res) {
   const member = await requireMemberByUserId(req.user.id);
   res.json({ goal: await money.upsertSavingsGoal(member, body, actorFrom(req)) });
 }
+
+export async function budgetProposal(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await money.proposeBudget(member));
+}
+
+const setupSchema = z.object({
+  lines: z.array(z.object({ category: z.string().trim().min(1).max(40), monthlyTarget: z.number().nonnegative() })).max(40),
+  toHome: z.number().nonnegative().optional(),
+  downPaymentTarget: z.number().nonnegative().optional(),
+});
+export async function budgetSetup(req, res) {
+  const body = setupSchema.parse(req.body);
+  const member = await requireMemberByUserId(req.user.id);
+  res.status(201).json(await money.setupBudget(member, body, actorFrom(req)));
+}
+
+export async function transactions(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json({ transactions: await money.recentTransactions(member.id, 60) });
+}

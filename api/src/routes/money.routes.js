@@ -13,5 +13,8 @@ router.post('/link', asyncHandler(money.link));
 router.post('/sync', asyncHandler(money.sync));
 router.put('/budgets', asyncHandler(money.setBudget));
 router.put('/savings', asyncHandler(money.saveGoal));
+router.get('/budget/proposal', asyncHandler(money.budgetProposal));
+router.post('/budget/setup', asyncHandler(money.budgetSetup));
+router.get('/transactions', asyncHandler(money.transactions));
 
 export default router;

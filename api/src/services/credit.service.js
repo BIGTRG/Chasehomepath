@@ -34,6 +34,14 @@ export async function ingestReport(member, actor) {
       [member.id, report.pulledAt, report.source, encrypt(JSON.stringify({ raw: report.raw, score: report.score }))],
     );
     const reportId = reportRows[0].id;
+    if (Number.isInteger(report.score) && report.score >= 300 && report.score <= 850) {
+      await db(
+        `INSERT INTO credit_score_history (member_id, source, bureau, score, recorded_at)
+         VALUES ($1, 'report', 'tri-merge', $2, $3::date)
+         ON CONFLICT (member_id, source, bureau, recorded_at) DO UPDATE SET score = EXCLUDED.score`,
+        [member.id, report.score, report.pulledAt],
+      );
+    }
 
     for (const rawItem of report.items) {
       const classified = classifyItem(rawItem);
@@ -260,4 +268,104 @@ export async function listDisputes(member) {
     [member.id],
   );
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Score history (Deon 2026-09-13): the monitoring display. Every report pull and every
+// SmartCredit reading lands here so the member watches the line move. Gated by the same
+// first-consultation rule as the score itself (spec §8).
+// ---------------------------------------------------------------------------
+const BUREAUS = ['experian', 'equifax', 'transunion'];
+
+export async function getScoreHistory(member) {
+  const consultDone = await hasCompletedConsultation(member.id);
+  if (!canRenderScore({ firstConsultationCompleted: consultDone })) {
+    return { withheld: true, reason: 'awaiting_first_consultation', points: [], bureaus: [] };
+  }
+  const { rows } = await query(
+    `SELECT source, bureau, score, recorded_at FROM credit_score_history
+      WHERE member_id = $1 ORDER BY recorded_at ASC, created_at ASC`,
+    [member.id],
+  );
+  // One point per date: tri-merge if present, else the average of that day's bureau readings.
+  const byDate = new Map();
+  for (const r of rows) {
+    const d = r.recorded_at.toISOString().slice(0, 10);
+    const e = byDate.get(d) ?? { date: d, scores: [], source: r.source };
+    if (r.bureau === 'tri-merge') e.tri = r.score; else e.scores.push(r.score);
+    e.source = r.source;
+    byDate.set(d, e);
+  }
+  const points = [...byDate.values()].map((e) => ({ date: e.date, score: e.tri ?? Math.round(e.scores.reduce((a, b) => a + b, 0) / e.scores.length), source: e.source }));
+  const bureaus = BUREAUS.map((b) => {
+    const last = [...rows].reverse().find((r) => r.bureau === b);
+    return last ? { bureau: b, score: last.score, date: last.recorded_at.toISOString().slice(0, 10) } : { bureau: b, score: null, date: null };
+  });
+  const first = points[0] ?? null;
+  const latest = points[points.length - 1] ?? null;
+  const lastDate = latest ? new Date(latest.date) : null;
+  const nextCheck = lastDate ? new Date(lastDate.getTime() + 30 * 86400_000).toISOString().slice(0, 10) : null;
+  const { rows: enroll } = await query(`SELECT status, provider FROM credit_monitoring_enrollments WHERE member_id = $1`, [member.id]);
+  return {
+    withheld: false,
+    points,
+    bureaus,
+    start: first?.score ?? null,
+    latest: latest?.score ?? null,
+    change: first && latest ? latest.score - first.score : 0,
+    since: first?.date ?? null,
+    lastDate: latest?.date ?? null,
+    nextCheck,
+    monitoring: enroll[0] ?? null,
+  };
+}
+
+/**
+ * Member logs the three bureau scores from their SmartCredit dashboard. Until the
+ * partner API is provisioned this is how monitoring readings reach the app; the
+ * adapter path writes the same rows with source 'smartcredit'.
+ */
+export async function recordScores(member, { experian, equifax, transunion, asOf, source = 'member' }, actor) {
+  const consultDone = await hasCompletedConsultation(member.id);
+  if (!canRenderScore({ firstConsultationCompleted: consultDone })) {
+    throw new ComplianceError('Scores unlock after your first meeting', 'score_after_first_consultation');
+  }
+  const date = asOf ?? new Date().toISOString().slice(0, 10);
+  const readings = Object.entries({ experian, equifax, transunion }).filter(([, v]) => Number.isInteger(v));
+  if (readings.length === 0) throw new ConflictError('Enter at least one bureau score');
+  await withTransaction(async (db) => {
+    for (const [bureau, score] of readings) {
+      await db(
+        `INSERT INTO credit_score_history (member_id, source, bureau, score, recorded_at)
+         VALUES ($1, $2, $3, $4, $5::date)
+         ON CONFLICT (member_id, source, bureau, recorded_at) DO UPDATE SET score = EXCLUDED.score`,
+        [member.id, source, bureau, score, date],
+      );
+    }
+    await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'credit.scores_recorded', entityType: 'member', entityId: member.id, metadata: { source, date, bureaus: readings.map(([b]) => b) }, ...actor.reqMeta }, db);
+  });
+  return getScoreHistory(member);
+}
+
+/** Housekeeping: pull monitoring scores for enrolled members through the adapter. Mock returns none. */
+export async function syncMonitoringScores() {
+  const { getCreditMonitoringAdapter } = await import('../integrations/creditMonitoring/index.js');
+  const adapter = getCreditMonitoringAdapter();
+  if (adapter.name === 'mock') return { synced: 0 };
+  const { rows } = await query(`SELECT m.id, m.user_id FROM credit_monitoring_enrollments e JOIN members m ON m.id = e.member_id WHERE e.status IN ('enrolled','linked')`);
+  let synced = 0;
+  for (const m of rows) {
+    try {
+      const readings = await adapter.fetchScores(m);
+      for (const r of readings) {
+        await query(
+          `INSERT INTO credit_score_history (member_id, source, bureau, score, recorded_at) VALUES ($1, 'smartcredit', $2, $3, $4::date)
+           ON CONFLICT (member_id, source, bureau, recorded_at) DO UPDATE SET score = EXCLUDED.score`,
+          [m.id, r.bureau, r.score, r.date],
+        );
+        synced += 1;
+      }
+    } catch (err) { console.error('monitoring sync failed for member', m.id, err.message); }
+  }
+  return { synced };
 }
