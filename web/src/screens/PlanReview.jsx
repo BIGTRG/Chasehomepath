@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { agentReview, agent as agentApi } from '../api/client.js';
 import ScreenTop from '../components/ScreenTop.jsx';
 
-// AI counselor walkthrough: after the first consultation and payment, the agent
+// Maren's walkthrough: after the first consultation and payment, the agent
 // steps through the plan and each credit item. Every line is generated from the
 // member's own file and copy-gated server-side.
 export default function PlanReview() {
@@ -30,7 +30,7 @@ export default function PlanReview() {
 
   return (
     <div className="content">
-      <ScreenTop title="Your plan review" sub={data.plan ? `${data.plan.name} pace, ${data.plan.targetMonths}-month target` : 'Guided by your HomePath counselor'} right={<Link className="link" to="/">Exit</Link>} />
+      <ScreenTop title="Your plan review" sub={data.plan ? `${data.plan.name} pace, ${data.plan.targetMonths}-month target` : 'Guided by Maren, your counselor'} right={<Link className="link" to="/">Exit</Link>} />
 
       {!data.ready && (
         <div className="note">Your full review unlocks once you choose a pace. <Link to="/plans">See plans</Link>. You can still preview it below.</div>
@@ -40,7 +40,7 @@ export default function PlanReview() {
       <div className="tsub">Step {i + 1} of {data.steps.length}</div>
 
       <div className="card review-card">
-        <div className="review-avatar">AI</div>
+        <div className="review-avatar">M</div>
         <div className="n">{step.title}</div>
         <p className="review-say">{step.say}</p>
         {step.screen && step.screen !== '/' && <Link className="link" to={step.screen}>Open this screen</Link>}
@@ -57,7 +57,7 @@ export default function PlanReview() {
         {last ? <button type="button" className="btn" onClick={() => navigate('/')}>Go to my plan</button>
           : <button type="button" className="btn" onClick={() => { setI(i + 1); setAnswer(null); }}>Next</button>}
       </div>
-      <p className="legal-note">Your counselor speaks only from your file. Rate, loan-term, and legal questions go to your licensed team.</p>
+      <p className="legal-note">Maren speaks only from your file. Rate, loan-term, and legal questions go to your licensed team.</p>
     </div>
   );
 }

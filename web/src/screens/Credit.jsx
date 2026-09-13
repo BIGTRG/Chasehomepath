@@ -59,7 +59,7 @@ export default function Credit() {
       <ScreenTop
         title="Your credit"
         sub="You're in control"
-        right={<Link to="/agent" className="top-ic" aria-label="Ask the HomePath agent">💬</Link>}
+        right={<Link to="/agent" className="top-ic" aria-label="Ask Maren">💬</Link>}
       />
 
       <div className="note">

@@ -232,3 +232,16 @@ export const meet = {
 export const agentReview = {
   planReview: () => api('/agent/plan-review'),
 };
+
+export const journey = {
+  status: () => api('/journey/status'),
+  enroll: (status = 'enrolled') => api('/journey/credit-monitoring', { method: 'POST', body: { status } }),
+  startMeeting: () => api('/journey/meeting', { method: 'POST', body: {} }),
+  meeting: (id) => api(`/journey/meeting/${id}`),
+  completeMeeting: (id, chosenPlan) => api(`/journey/meeting/${id}/complete`, { method: 'POST', body: { chosenPlan: chosenPlan ?? null } }),
+  training: () => api('/journey/training'),
+  propose: (body) => api('/journey/training/propose', { method: 'POST', body }),
+  approve: () => api('/journey/training/approve', { method: 'POST', body: {} }),
+  lesson: (moduleId) => api(`/journey/training/lessons/${moduleId}`),
+  check: (moduleId, answers) => api(`/journey/training/lessons/${moduleId}/check`, { method: 'POST', body: { answers } }),
+};

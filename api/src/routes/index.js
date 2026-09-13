@@ -18,6 +18,7 @@ import homeownerRoutes from './homeowner.routes.js';
 import intakeRoutes from './intake.routes.js';
 import billingRoutes from './billing.routes.js';
 import meetRoutes from './meet.routes.js';
+import journeyRoutes from './journey.routes.js';
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.use('/home', homeownerRoutes);
 router.use('/intake', intakeRoutes);
 router.use('/billing', billingRoutes);
 router.use('/meet', meetRoutes);
+router.use('/journey', journeyRoutes);
 
 // All 13 phases mounted. Later work extends these.
 

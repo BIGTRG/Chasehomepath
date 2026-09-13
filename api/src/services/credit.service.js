@@ -84,6 +84,14 @@ async function latestReportId(memberId) {
  * withheld until the first consultation is complete (spec §8) — before that we return
  * a withheld marker, never the number.
  */
+/** Score for use INSIDE the consultation itself (the meeting is what unlocks it). */
+export async function scoreForConsultation(memberId) {
+  const reportId = await latestReportId(memberId);
+  if (!reportId) return null;
+  const s = await readScoreFromRaw(reportId);
+  return s?.value ?? null;
+}
+
 export async function getCreditOverview(member) {
   const reportId = await latestReportId(member.id);
   if (!reportId) {

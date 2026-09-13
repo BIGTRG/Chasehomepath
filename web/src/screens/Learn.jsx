@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { learn as learnApi } from '../api/client.js';
+import { Link } from 'react-router-dom';
+import { learn as learnApi, journey as journeyApi } from '../api/client.js';
 import ScreenTop from '../components/ScreenTop.jsx';
 
 const PHASES = [
@@ -12,25 +13,20 @@ const PHASES = [
 // until needed. "Now" leads with the current module. (spec §4.13)
 export default function Learn() {
   const [data, setData] = useState(null);
+  const [sched, setSched] = useState(null);
   const [error, setError] = useState(null);
 
   async function load() {
     try {
-      setData(await learnApi.mine());
+      const [d, s] = await Promise.all([learnApi.mine(), journeyApi.training().catch(() => null)]);
+      setData(d); setSched(s);
     } catch (err) {
       setError(err.message);
     }
   }
   useEffect(() => { load(); }, []);
-
-  async function complete(moduleId) {
-    try {
-      await learnApi.complete(moduleId);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
+  const slotFor = (moduleId) => sched?.sessions?.find((x) => x.moduleId === moduleId && ['approved', 'failed', 'proposed'].includes(x.status));
+  const fmt = (iso) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
   if (error) return <div className="content"><div className="error">{error}</div></div>;
   if (!data) return <div className="loading">Loading…</div>;
@@ -41,7 +37,20 @@ export default function Learn() {
 
   return (
     <div className="content">
-      <ScreenTop title="Your curriculum" sub="Assigned from your plan" />
+      <ScreenTop title="Your curriculum" sub={sched?.sessions?.length ? 'On your approved schedule' : 'Assigned from your plan'} right={<Link className="link" to="/start/training">Schedule</Link>} />
+
+      {sched?.next && (
+        <Link to={`/learn/${sched.next.moduleId}`} className="card item-card hl">
+          <div className="item-top"><span className="item-creditor">Next lesson: {sched.next.title}</span><span className="chev">›</span></div>
+          <div className="item-meta">{fmt(sched.next.scheduledAt)} · {sched.next.durationMin} min · opens 15 minutes before</div>
+        </Link>
+      )}
+      {sched && sched.sessions.length === 0 && (
+        <Link to="/start/training" className="card item-card hl">
+          <div className="item-top"><span className="item-creditor">Set your training schedule</span><span className="chev">›</span></div>
+          <div className="item-meta">Lessons run at times you approve, with an alert when each one starts.</div>
+        </Link>
+      )}
 
       {current && (
         <>
@@ -52,7 +61,7 @@ export default function Learn() {
                 <div className="item-creditor">{current.title}</div>
                 <div className="item-meta">{current.durationMin} min</div>
               </div>
-              <button className="btn small" onClick={() => complete(current.moduleId)}>Mark done</button>
+              <Link className="btn small" to={`/learn/${current.moduleId}`}>{slotFor(current.moduleId) ? fmt(slotFor(current.moduleId).scheduledAt) : 'Open'}</Link>
             </div>
           </div>
         </>
@@ -73,7 +82,7 @@ export default function Learn() {
                 {m.status === 'done' ? (
                   <span className="pill g">Done</span>
                 ) : m.status === 'available' ? (
-                  <button className="btn small" onClick={() => complete(m.moduleId)}>Mark done</button>
+                  <Link className="btn small" to={`/learn/${m.moduleId}`}>{slotFor(m.moduleId) ? fmt(slotFor(m.moduleId).scheduledAt) : 'Open'}</Link>
                 ) : (
                   <span className="pill n">Locked</span>
                 )}

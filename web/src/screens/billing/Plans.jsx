@@ -27,7 +27,8 @@ export default function Plans() {
 
   function choose(p) {
     if (!user) return navigate('/register', { state: { planCode: p.code } });
-    navigate(`/checkout/${p.code}`);
+    const meeting = new URLSearchParams(window.location.search).get('meeting');
+    navigate(`/checkout/${p.code}${meeting ? `?meeting=${meeting}` : ''}`);
   }
 
   return (

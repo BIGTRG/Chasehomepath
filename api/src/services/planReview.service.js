@@ -2,9 +2,10 @@ import { query } from '../db/pool.js';
 import { getPlanForMember } from './plan.service.js';
 import { getCreditOverview, hasCompletedConsultation } from './credit.service.js';
 import { checkCopy } from '../compliance/copyGate.js';
+import { COUNSELOR } from '../lib/counselor.js';
 
 /**
- * AI counselor plan review (Deon, 2026-09-12): after the first consultation and
+ * Counselor (Maren) plan review (Deon, 2026-09-12): after the first consultation and
  * payment, the agent walks the member through their plan and each credit item.
  *
  * Steps are generated from the member's OWN data with deterministic templates and
@@ -39,7 +40,7 @@ export async function buildPlanReview(member) {
 
   steps.push({
     key: 'welcome', title: 'Your plan, in plain terms', screen: '/',
-    say: `Welcome. I am your HomePath counselor. ${consultDone ? 'Your specialist and I built this plan from your first meeting' : 'This plan comes from your intake'}${intake?.target_area ? `, aimed at ${intake.target_area}` : ''}. ` +
+    say: `Welcome. I am ${COUNSELOR.name}, ${COUNSELOR.title}. ${consultDone ? 'Your specialist and I built this plan from your first meeting' : 'This plan comes from your intake'}${intake?.target_area ? `, aimed at ${intake.target_area}` : ''}. ` +
       `You are on the ${sub?.name ?? 'HomePath'} pace with a ${months}-month target, which points at ${targetLabel}. Nothing here is a promise; it is the work, in order.`,
   });
 
@@ -85,7 +86,7 @@ export async function buildPlanReview(member) {
   });
   steps.push({
     key: 'done', title: 'That is your plan', screen: '/',
-    say: 'That is the whole plan. Ask me anything about it, any time, from the agent tab. Questions about rates, loan terms, or legal matters go to your licensed team, and I will hand those off.',
+    say: 'That is the whole plan. Ask me anything about it, any time, from the Maren tab. Questions about rates, loan terms, or legal matters go to your licensed team, and I will hand those off.',
   });
 
   // Copy gate every line; replace anything promissory with a neutral sentence.

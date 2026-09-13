@@ -26,14 +26,15 @@ async function planContext(memberId) {
 
 /** Create a module_assignment per module if the member has none yet (assignment-from-plan). */
 async function ensureAssignments(memberId) {
-  const { rows: existing } = await query(
-    `SELECT 1 FROM module_assignments WHERE member_id = $1 AND deleted_at IS NULL LIMIT 1`,
-    [memberId],
-  );
-  if (existing[0]) return;
-
+  // Assign every module the member does not have yet (the readiness engine may have
+  // assigned extras first, so "any assignment exists" is not a safe early return).
   await withTransaction(async (db) => {
-    const { rows: modules } = await db(`SELECT id, phase FROM modules WHERE deleted_at IS NULL`);
+    const { rows: modules } = await db(
+      `SELECT m.id, m.phase FROM modules m
+        WHERE m.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM module_assignments ma WHERE ma.member_id = $1 AND ma.module_id = m.id AND ma.deleted_at IS NULL)`,
+      [memberId],
+    );
     for (const mod of modules) {
       await db(
         `INSERT INTO module_assignments (member_id, module_id, status, unlock_condition)

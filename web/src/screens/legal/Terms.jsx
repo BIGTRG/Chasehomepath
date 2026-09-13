@@ -108,8 +108,10 @@ export default function Terms() {
           pause until payment succeeds.</li>
         <li><b>What the fee is for.</b> Plan and session fees pay for homeownership education,
           planning, budgeting and savings tools, curriculum, marketplace access, and your team's time.
-          No fee is charged for disputing, improving, or repairing your credit. The AI dispute helper
-          is free to every member and only prepares letters you choose to send yourself.</li>
+          No fee is charged for disputing, improving, or repairing your credit. The dispute helper
+          is free to every member and only prepares letters you choose to send yourself. Maren, the
+          counselor in the app and in your first meeting, is an automated virtual counselor operated
+          by CHASE HomePath, not a person; she is identified as such at the start of every meeting.</li>
         <li><b>Third-party charges.</b> Credit monitoring you enroll in through a provider such as
           SmartCredit, and any consultation fee for a pulled credit report, are the provider's charges
           under its terms and are disclosed to you before you enroll.</li>

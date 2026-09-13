@@ -82,17 +82,17 @@ export default function PlanHome() {
           : `Day ${data.planDay} of ${totalDays}. Nothing gets placed before day ${placement.minDay} — that time is doing real work on your file.`}
       </div>
 
-      {/* Journey: choose a pace after the first consultation, then the AI plan review */}
+      {/* Journey: choose a pace after the first consultation, then the plan walkthrough with Maren */}
       {bill !== undefined && !bill?.subscription && (
         <Link to="/plans" className="card item-card hl">
           <div className="item-top"><span className="item-creditor">Choose your pace</span><span className="chev">›</span></div>
-          <div className="item-meta">Steady, Focused, or Express. Monthly, cancel anytime. Unlocks your full plan and AI plan review.</div>
+          <div className="item-meta">Steady, Focused, or Express. Monthly, cancel anytime. Unlocks your full plan and the walkthrough with Maren.</div>
         </Link>
       )}
       {bill?.subscription && data.planDay <= 7 && (
         <Link to="/plan-review" className="card item-card gl">
           <div className="item-top"><span className="item-creditor">Walk through your plan</span><span className="chev">›</span></div>
-          <div className="item-meta">Your AI counselor goes screen by screen through your plan and each credit item.</div>
+          <div className="item-meta">Maren goes screen by screen through your plan and each credit item.</div>
         </Link>
       )}
       {bill?.sessions?.some((x) => x.status === 'booked') && (() => {
@@ -137,8 +137,8 @@ export default function PlanHome() {
       </Link>
 
       <Link to="/agent" className="card item-card">
-        <div className="item-top"><span className="item-creditor">HomePath agent</span><span className="chev">›</span></div>
-        <div className="item-meta">Always on. Questions about your plan, credit, or money — ask anytime.</div>
+        <div className="item-top"><span className="item-creditor">Ask Maren</span><span className="chev">›</span></div>
+        <div className="item-meta">Your counselor, always on. Questions about your plan, credit, or money, any time.</div>
       </Link>
 
       {data.status === 'completed' && (

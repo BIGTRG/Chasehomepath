@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { billing as billingApi } from '../../api/client.js';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { billing as billingApi, journey as journeyApi } from '../../api/client.js';
 import ScreenTop from '../../components/ScreenTop.jsx';
 import PaymentField from '../../components/PaymentField.jsx';
 import { money } from './Plans.jsx';
@@ -10,6 +10,8 @@ import { money } from './Plans.jsx';
 export default function Checkout() {
   const { planCode } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const meetingId = params.get('meeting');
   const [catalog, setCatalog] = useState(null);
   const [token, setToken] = useState(null);
   const [methodLabel, setMethodLabel] = useState(null);
@@ -30,6 +32,12 @@ export default function Checkout() {
     setError(null);
     try {
       await billingApi.subscribe({ planCode, paymentMethodToken: token, consentAccepted: true });
+      if (meetingId) {
+        // Paid inside the meeting with Maren: close the consultation and go set up training.
+        try { await journeyApi.completeMeeting(meetingId, planCode); } catch { /* already closed */ }
+        navigate('/start/training', { replace: true });
+        return;
+      }
       navigate('/billing', { state: { justSubscribed: true } });
     } catch (e) {
       setError(e.message || 'Payment did not go through');

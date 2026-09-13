@@ -26,16 +26,16 @@ export async function findById(id, { withSecret = false } = {}) {
  * Create a user. `db` may be a transaction-bound query fn so the caller can create
  * the user and its role profile (member/staff/partner) atomically.
  */
-export async function createUser({ email, phone = null, password, role, status = 'active' }, db = query) {
+export async function createUser({ email, phone = null, password, role, status = 'active', displayName = null }, db = query) {
   const existing = await findByEmail(email);
   if (existing) throw new ConflictError('An account with that email already exists', 'email_taken');
 
   const passwordHash = await hashPassword(password);
   const { rows } = await db(
-    `INSERT INTO users (email, phone, password_hash, role, status)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (email, phone, password_hash, role, status, display_name)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${PUBLIC_COLUMNS}`,
-    [email, phone, passwordHash, role, status],
+    [email, phone, passwordHash, role, status, displayName],
   );
   return rows[0];
 }

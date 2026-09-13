@@ -497,3 +497,63 @@ body {
 .horizon { padding: 8px 0; border-top: 1px solid var(--line); }
 .horizon:first-child { border-top: 0; padding-top: 0; }
 .horizon .s { margin-top: 3px; line-height: 1.45; }
+
+/* Onboarding v2 */
+.steps-strip { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+.steps-strip span { font-size: 11.5px; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; }
+.steps-strip b { color: var(--orange-dark); margin-right: 3px; }
+.terms-box { max-height: 190px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fbfaf8; font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+.terms-box p { margin: 2px 0 10px; }
+.terms-box.read { border-color: var(--green); }
+.card.dim { opacity: .55; }
+.row.done .n { color: var(--muted); }
+.cc.g { background: var(--green); color: #fff; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 4px; }
+.seg button { flex: 1; padding: 9px; border: 0; background: #fff; font: inherit; font-weight: 600; color: var(--muted); }
+.seg button.on { background: var(--tint); color: var(--orange-dark); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); }
+.chip.on { background: var(--navy); border-color: var(--navy); color: #fff; }
+.lesson-points { margin: 0; padding-left: 20px; line-height: 1.55; font-size: 14px; }
+.lesson-points li { margin: 0 0 10px; }
+.quiz-opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; font-size: 13.5px; }
+.quiz-opt.sel { border-color: var(--orange); background: var(--tint); }
+.quiz-opt input { accent-color: var(--orange); margin-top: 2px; }
+
+/* Maren's room */
+.room { min-height: 100vh; background: var(--navy); color: #fff; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+.room-top { display: flex; justify-content: space-between; align-items: center; }
+.room-title { font-weight: 800; font-size: 18px; }
+.room-sub { font-size: 12px; color: #c9d1e6; }
+.room-step { font-size: 12px; color: #c9d1e6; background: rgba(255,255,255,.08); border-radius: 999px; padding: 4px 10px; }
+.room-stage { position: relative; background: #0f1a33; border-radius: 16px; height: 240px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.maren { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.maren-face { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(145deg, #EA9120, #B8630F); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 40px; color: #fff; box-shadow: 0 0 0 0 rgba(234,145,32,.5); transition: box-shadow .3s; }
+.room-stage.speaking .maren-face { box-shadow: 0 0 0 12px rgba(234,145,32,.18); }
+.maren-wave { display: flex; gap: 3px; height: 18px; align-items: flex-end; }
+.maren-wave i { width: 4px; height: 4px; background: #EA9120; border-radius: 2px; opacity: .6; }
+.room-stage.speaking .maren-wave i { animation: wave .9s ease-in-out infinite; }
+.room-stage.speaking .maren-wave i:nth-child(2) { animation-delay: .15s } .room-stage.speaking .maren-wave i:nth-child(3) { animation-delay: .3s } .room-stage.speaking .maren-wave i:nth-child(4) { animation-delay: .45s } .room-stage.speaking .maren-wave i:nth-child(5) { animation-delay: .6s }
+@keyframes wave { 0%,100% { height: 4px } 50% { height: 18px } }
+.maren-name { font-size: 12px; color: #c9d1e6; }
+.self { position: absolute; right: 10px; bottom: 10px; width: 84px; height: 112px; border-radius: 10px; background: #1b2a4d; border: 1px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #c9d1e6; overflow: hidden; }
+.self video { width: 100%; height: 100%; object-fit: cover; }
+.captions { background: rgba(255,255,255,.06); border-radius: 12px; padding: 12px 14px; }
+.captions.answer { border-left: 3px solid var(--orange); }
+.cap-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #f4c98a; font-weight: 700; margin-bottom: 4px; }
+.cap-text { margin: 0; font-size: 15px; line-height: 1.55; }
+.captions .link { color: #f4c98a; }
+.room-plans .card { color: var(--ink); }
+.room-plans .price { font-weight: 800; font-size: 20px; }
+.room-plans .price small { font-size: 12px; font-weight: 600; color: var(--muted); }
+.room-plans .s a { color: #f4c98a; }
+.room-plans .s .link { color: #f4c98a; }
+.room-ask { display: flex; gap: 8px; }
+.room-ask input { flex: 1; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: #fff; padding: 10px 12px; font: inherit; }
+.room-ask input::placeholder { color: #9aa6c4; }
+.room-bar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: auto; }
+.rb { border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: #fff; border-radius: 999px; padding: 9px 13px; font: inherit; font-size: 13px; font-weight: 600; }
+.rb.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+.rb.danger { border-color: #d96b6b; color: #ffb3b3; }
+.rb:disabled { opacity: .4; }
+.room-legal { color: #9aa6c4; text-align: center; }

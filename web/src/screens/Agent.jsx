@@ -6,7 +6,7 @@ import { agent as agentApi } from '../api/client.js';
 // anything licensed (rates, terms) to a human. (spec §4.10)
 export default function Agent() {
   const [messages, setMessages] = useState([
-    { from: 'agent', text: "Hi! Ask me anything about your plan, credit, money, or learning. For rates, loan terms, or legal questions I'll connect you with your team." },
+    { from: 'agent', text: "Hi, it's Maren. Ask me anything about your plan, credit, money, or lessons. For rates, loan terms, or legal questions I'll bring in your team." },
   ]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,7 +34,7 @@ export default function Agent() {
   return (
     <div className="content">
       <ScreenTop
-        title="HomePath agent"
+        title="Maren"
         sub={<span style={{ color: 'var(--green)' }}>Always on</span>}
         right={<span className="av" aria-hidden>⌂</span>}
       />

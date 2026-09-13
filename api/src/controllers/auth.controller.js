@@ -78,7 +78,7 @@ export async function register(req, res) {
 
   const session = await withTransaction(async (db) => {
     const user = await createUser(
-      { email: input.email, phone: input.phone ?? null, password: input.password, role: 'member' },
+      { email: input.email, phone: input.phone ?? null, password: input.password, role: 'member', displayName: input.name },
       db,
     );
     // The product is the plan (spec §1): every member gets a plan + six tracks at signup.

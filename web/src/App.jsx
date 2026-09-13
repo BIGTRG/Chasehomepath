@@ -33,6 +33,15 @@ import Homeowner from './screens/Homeowner.jsx';
 import SmartCredit from './screens/SmartCredit.jsx';
 import PlanReview from './screens/PlanReview.jsx';
 import Readiness from './screens/Readiness.jsx';
+import Lesson from './screens/Lesson.jsx';
+
+// Onboarding v2
+import StartHub from './screens/start/StartHub.jsx';
+import CreditMonitoring from './screens/start/CreditMonitoring.jsx';
+import Documents from './screens/start/Documents.jsx';
+import Book from './screens/start/Book.jsx';
+import Training from './screens/start/Training.jsx';
+import MarenRoom from './screens/meet/MarenRoom.jsx';
 
 // Billing + counseling
 import Plans from './screens/billing/Plans.jsx';
@@ -72,6 +81,12 @@ function MemberSurface() {
         <Route path="/checkout/:planCode" element={<Checkout />} />
         <Route path="/counseling" element={<Counseling />} />
         <Route path="/group/:id/pay" element={<GroupPay />} />
+        <Route path="/start" element={<StartHub />} />
+        <Route path="/start/credit" element={<CreditMonitoring />} />
+        <Route path="/start/docs" element={<Documents />} />
+        <Route path="/start/book" element={<Book />} />
+        <Route path="/start/training" element={<Training />} />
+        <Route path="/meet/maren/:id" element={<MarenRoom />} />
         <Route path="/meet/:code" element={<Meet />} />
         <Route path="/plan-review" element={<PlanReview />} />
         <Route element={<MemberLayout />}>
@@ -81,6 +96,7 @@ function MemberSurface() {
           <Route path="/money" element={<Money />} />
           <Route path="/team" element={<Team />} />
           <Route path="/learn" element={<Learn />} />
+          <Route path="/learn/:moduleId" element={<Lesson />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/marketplace/plans/:planId" element={<PlanToLot />} />
           <Route path="/agent" element={<Agent />} />
@@ -137,7 +153,7 @@ function AuthSurface() {
         <Route path="/reset" element={<Reset />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/counseling" element={<Counseling />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/discover" replace />} />
       </Routes>
     </div>
   );
