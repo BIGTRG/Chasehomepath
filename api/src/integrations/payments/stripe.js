@@ -51,8 +51,12 @@ export function createStripePaymentAdapter({ secretKey, publishableKey, webhookS
     async attachPaymentMethod({ customerId, paymentMethodToken }) {
       const pm = await call('POST', `/payment_methods/${paymentMethodToken}/attach`, { customer: customerId });
       await call('POST', `/customers/${customerId}`, { invoice_settings: { default_payment_method: pm.id } });
+      if (pm.type === 'us_bank_account') {
+        const b = pm.us_bank_account || {};
+        return { paymentMethodId: pm.id, type: 'bank', label: `${b.bank_name || 'Bank account'} ending ${b.last4}` };
+      }
       const card = pm.card || {};
-      return { paymentMethodId: pm.id, label: card.brand ? `${cap(card.brand)} ending ${card.last4}` : 'Card on file' };
+      return { paymentMethodId: pm.id, type: 'card', label: card.brand ? `${cap(card.brand)} ending ${card.last4}` : 'Card on file' };
     },
     async createSubscription({ customerId, paymentMethodId, planCode, priceCents, metadata }) {
       const s = await call(
@@ -63,6 +67,7 @@ export function createStripePaymentAdapter({ secretKey, publishableKey, webhookS
           default_payment_method: paymentMethodId,
           items: [{ price_data: { currency: 'usd', unit_amount: priceCents, recurring: { interval: 'month' }, product_data: { name: `CHASE HomePath ${cap(planCode)} plan` } } }],
           payment_behavior: 'error_if_incomplete',
+          payment_settings: { payment_method_types: ['card', 'us_bank_account'], save_default_payment_method: 'on_subscription' },
           expand: ['latest_invoice'],
           metadata: { planCode, ...metadata },
         },
@@ -89,8 +94,11 @@ export function createStripePaymentAdapter({ secretKey, publishableKey, webhookS
       const pi = await call('POST', '/payment_intents', {
         amount: amountCents, currency: 'usd', customer: customerId, payment_method: paymentMethodId,
         confirm: true, off_session: true, description, metadata,
+        payment_method_types: ['card', 'us_bank_account'],
       }, `pi-${metadata?.memberId}-${Date.now()}`);
-      return { chargeRef: pi.id, status: pi.status === 'succeeded' ? 'succeeded' : 'failed', failureReason: pi.last_payment_error?.message, amountCents };
+      // ACH settles in 1-4 business days: 'processing' is a pending success, not a failure.
+      const status = pi.status === 'succeeded' ? 'succeeded' : pi.status === 'processing' ? 'pending' : 'failed';
+      return { chargeRef: pi.id, status, failureReason: pi.last_payment_error?.message, amountCents };
     },
     async refund({ chargeRef, amountCents }) {
       const r = await call('POST', '/refunds', { payment_intent: chargeRef, amount: amountCents });

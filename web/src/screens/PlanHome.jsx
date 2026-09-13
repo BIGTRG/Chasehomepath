@@ -126,6 +126,11 @@ export default function PlanHome() {
         <div className="item-meta">Homes, lots, and build plans — priced with your assistance.</div>
       </Link>
 
+      <Link to="/readiness" className="card item-card">
+        <div className="item-top"><span className="item-creditor">Where you stand</span><span className="chev">›</span></div>
+        <div className="item-meta">FHA, USDA, conventional: today's gaps and where you could be at 6, 9, and 12 months.</div>
+      </Link>
+
       <Link to="/counseling" className="card item-card">
         <div className="item-top"><span className="item-creditor">Talk to a person</span><span className="chev">›</span></div>
         <div className="item-meta">1:1 or group counseling on food spending, saving, budgeting, and more. Book any time.</div>

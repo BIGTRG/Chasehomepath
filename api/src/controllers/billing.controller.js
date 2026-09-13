@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { requireMemberByUserId } from '../services/member.service.js';
 import * as billing from '../services/billing.service.js';
 import { getPaymentAdapter } from '../integrations/payments/index.js';
+import * as reporting from '../services/paymentReporting.service.js';
+import { query } from '../db/pool.js';
+import { readinessForMember } from '../services/readiness.service.js';
 
 const actorFrom = (req) => ({
   userId: req.user.id,
@@ -127,4 +130,33 @@ const markSchema = z.object({ status: z.enum(['completed', 'cancelled']) });
 export async function markSession(req, res) {
   const body = markSchema.parse(req.body);
   res.json({ session: await billing.completeSession(req.params.id, body, actorFrom(req)) });
+}
+
+// ── Payment reporting (opt-in) ──
+export async function reportingStatus(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await reporting.status(member.id));
+}
+const optSchema = z.object({ optIn: z.boolean() });
+export async function reportingOptIn(req, res) {
+  const { optIn } = optSchema.parse(req.body);
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await reporting.setOptIn(member.id, optIn, actorFrom(req)));
+}
+export async function reportingSummary(_req, res) {
+  res.json(await reporting.operatorSummary());
+}
+
+// ── Readiness engine ──
+export async function readiness(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await readinessForMember(member, actorFrom(req)));
+}
+export async function readinessForOperator(req, res) {
+  const { rows } = await query(
+    `SELECT id, user_id, plan_id, membership_tier, GREATEST(0, (CURRENT_DATE - join_date))::int AS plan_day FROM members WHERE id = $1 AND deleted_at IS NULL`,
+    [req.params.memberId],
+  );
+  if (!rows[0]) return res.status(404).json({ error: { code: 'not_found', message: 'Member not found' } });
+  res.json(await readinessForMember(rows[0], null));
 }

@@ -6,14 +6,25 @@ import { useState } from 'react';
  * key is configured); in mock mode we tokenize locally to pm_mock_<last4>.
  * The parent receives `onToken(token, label)` once the field is complete.
  */
-export default function PaymentField({ processor, onToken }) {
+export default function PaymentField({ processor, onToken, allowBank = true }) {
+  const [method, setMethod] = useState(allowBank ? 'bank' : 'card');
   const [num, setNum] = useState('');
   const [exp, setExp] = useState('');
   const [cvc, setCvc] = useState('');
   const [touched, setTouched] = useState(false);
 
+  const tabs = allowBank ? (
+    <div className="pay-tabs">
+      <button type="button" className={method === 'bank' ? 'on' : ''} onClick={() => { setMethod('bank'); onToken(null, null); }}>Bank draft <small>recommended</small></button>
+      <button type="button" className={method === 'card' ? 'on' : ''} onClick={() => { setMethod('card'); onToken(null, null); }}>Card</button>
+    </div>
+  ) : null;
+
+  if (method === 'bank') {
+    return <div>{tabs}<BankField processor={processor} onToken={onToken} /></div>;
+  }
   if (processor?.mode === 'stripe') {
-    return <StripeField publishableKey={processor.publishableKey} onToken={onToken} />;
+    return <div>{tabs}<StripeField publishableKey={processor.publishableKey} onToken={onToken} /></div>;
   }
 
   const digits = num.replace(/\D/g, '');
@@ -41,6 +52,8 @@ export default function PaymentField({ processor, onToken }) {
   }
 
   return (
+    <div>
+      {tabs}
     <div className="pay-field">
       <div className="field">
         <label>Card number</label>
@@ -58,6 +71,36 @@ export default function PaymentField({ processor, onToken }) {
       </div>
       {touched && !valid && <div className="tsub">Enter the full card number, expiration, and CVC.</div>}
       <div className="pay-secure">Encrypted. Your card details are sent straight to the payment processor and never stored on CHASE HomePath servers.</div>
+    </div>
+    </div>
+  );
+}
+
+/**
+ * Automatic bank draft (ACH). Routing + account number are tokenized by the processor;
+ * in mock mode we tokenize locally to pm_mock_bank_<last4>. With Stripe this becomes
+ * Financial Connections (instant bank link) or micro-deposit verification.
+ */
+function BankField({ onToken }) {
+  const [routing, setRouting] = useState('');
+  const [acct, setAcct] = useState('');
+  const [acct2, setAcct2] = useState('');
+  const [name, setName] = useState('');
+  function emit(r, a, a2, n) {
+    const ok = /^\d{9}$/.test(r) && a.length >= 4 && a === a2 && n.trim().length >= 2;
+    onToken(ok ? `pm_mock_bank_${a.slice(-4)}` : null, ok ? `Bank account ending ${a.slice(-4)}` : null);
+  }
+  return (
+    <div className="pay-field">
+      <div className="bank-why">Automatic draft pulls your plan payment from your checking account each month. Fewer failed payments than cards, and no expiration dates to chase.</div>
+      <div className="field"><label>Name on account</label><input autoComplete="name" value={name} onChange={(e) => { setName(e.target.value); emit(routing, acct, acct2, e.target.value); }} /></div>
+      <div className="field"><label>Routing number</label><input inputMode="numeric" placeholder="9 digits" value={routing} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 9); setRouting(v); emit(v, acct, acct2, name); }} /></div>
+      <div className="pay-row">
+        <div className="field"><label>Account number</label><input inputMode="numeric" value={acct} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 17); setAcct(v); emit(routing, v, acct2, name); }} /></div>
+        <div className="field"><label>Confirm account</label><input inputMode="numeric" value={acct2} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 17); setAcct2(v); emit(routing, acct, v, name); }} /></div>
+      </div>
+      {acct && acct2 && acct !== acct2 && <div className="tsub">Account numbers do not match.</div>}
+      <div className="pay-secure">Encrypted. Bank details go straight to the payment processor; we keep only the last four digits. Drafts settle in 1 to 4 business days.</div>
     </div>
   );
 }

@@ -14,8 +14,13 @@ export default function Billing() {
   const [error, setError] = useState(null);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rep, setRep] = useState(null);
+  const [repConsent, setRepConsent] = useState(false);
 
-  const load = () => billingApi.me().then(setData).catch((e) => setError(e.message));
+  const load = () => Promise.all([
+    billingApi.me().then(setData),
+    billingApi.reporting().then(setRep).catch(() => setRep(null)),
+  ]).catch((e) => setError(e.message));
   useEffect(() => { load(); }, []);
 
   if (error) return <div className="content"><div className="error">{error}</div></div>;
@@ -88,6 +93,26 @@ export default function Billing() {
             </div>
           ))}
         </div>
+      )}
+
+      {sub && rep && (
+        <>
+          <div className="h2">Report my payments</div>
+          {rep.optedIn ? (
+            <div className="card gl">
+              <div className="n">On. Your monthly plan payments are being reported.</div>
+              <div className="s" style={{ margin: '4px 0 8px' }}>Since {fmt(rep.optedInAt)}. {rep.events.length} payment{rep.events.length === 1 ? '' : 's'} recorded, {rep.events.filter((e) => e.onTime).length} on time.</div>
+              <button type="button" className="btn secondary" disabled={busy} onClick={() => act(() => billingApi.reportingOptIn(false))}>Stop reporting</button>
+            </div>
+          ) : (
+            <div className="card">
+              <div className="n">Turn your plan payment into payment history</div>
+              <div className="s" style={{ margin: '4px 0 8px' }}>With your permission, each on-time monthly payment is reported as part of your payment record. Late payments are reported too.</div>
+              <label className="consent"><input type="checkbox" checked={repConsent} onChange={(e) => setRepConsent(e.target.checked)} /><span>{rep.consentText}</span></label>
+              <button type="button" className="btn outline" disabled={!repConsent || busy} onClick={() => act(() => billingApi.reportingOptIn(true))}>Start reporting my payments</button>
+            </div>
+          )}
+        </>
       )}
 
       <div className="h2">Receipts</div>

@@ -31,7 +31,13 @@ router.get('/sessions/slots', authenticate, authorize('member'), asyncHandler(bi
 router.post('/sessions', authenticate, authorize('member'), asyncHandler(billing.bookSession));
 router.post('/sessions/:id/cancel', authenticate, authorize('member'), asyncHandler(billing.cancelSession));
 
+router.get('/reporting', authenticate, authorize('member'), asyncHandler(billing.reportingStatus));
+router.post('/reporting/opt-in', authenticate, authorize('member'), asyncHandler(billing.reportingOptIn));
+router.get('/readiness', authenticate, authorize('member'), asyncHandler(billing.readiness));
+
 // Operator (MFA enforced)
+router.get('/operator/reporting', authenticate, requireStaffMfa, authorize('manager', 'admin'), asyncHandler(billing.reportingSummary));
+router.get('/operator/members/:memberId/readiness', authenticate, requireStaffMfa, authorize(...STAFF_ROLES), asyncHandler(billing.readinessForOperator))
 router.get('/operator/summary', authenticate, requireStaffMfa, authorize('manager', 'admin'), asyncHandler(billing.summary));
 router.get('/operator/members/:memberId', authenticate, requireStaffMfa, authorize(...STAFF_ROLES), asyncHandler(billing.memberBilling));
 router.post('/operator/sessions/:id/mark', authenticate, requireStaffMfa, authorize(...STAFF_ROLES), asyncHandler(billing.markSession));

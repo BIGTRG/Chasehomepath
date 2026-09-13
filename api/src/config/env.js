@@ -97,6 +97,7 @@ export const env = {
     video: optional('VIDEO_ADAPTER', 'mock'),
     anthropic: optional('ANTHROPIC_ADAPTER', 'mock'),
     payment: optional('PAYMENT_ADAPTER', 'mock'),
+    paymentReporting: optional('PAYMENT_REPORTING_ADAPTER', 'mock'),
   },
 
   payments: {

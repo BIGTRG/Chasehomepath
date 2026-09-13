@@ -32,6 +32,7 @@ import Agent from './screens/Agent.jsx';
 import Homeowner from './screens/Homeowner.jsx';
 import SmartCredit from './screens/SmartCredit.jsx';
 import PlanReview from './screens/PlanReview.jsx';
+import Readiness from './screens/Readiness.jsx';
 
 // Billing + counseling
 import Plans from './screens/billing/Plans.jsx';
@@ -88,6 +89,7 @@ function MemberSurface() {
           <Route path="/disputes" element={<Disputes />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/sessions/book" element={<BookSession />} />
+          <Route path="/readiness" element={<Readiness />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -3,7 +3,8 @@ import { ValidationError } from '../../lib/errors.js';
 
 /**
  * Mock processor. Deterministic and offline. Accepts payment-method tokens of the form
- *   pm_mock_<last4>            -> succeeds, label "Card ending <last4>"
+ *   pm_mock_<last4>            -> card, succeeds, label "Card ending <last4>"
+ *   pm_mock_bank_<last4>       -> ACH bank account (auto-draft), label "Bank account ending <last4>"
  *   pm_mock_declined           -> every charge fails (for tests / demo)
  * Period math mirrors Stripe: monthly anchor on the signup timestamp.
  */
@@ -21,8 +22,13 @@ export function createMockPaymentAdapter() {
       if (!/^pm_mock_/.test(paymentMethodToken || '')) throw new ValidationError('Invalid payment method token');
       const id = `pm_${randomUUID().slice(0, 12)}`;
       if (paymentMethodToken === 'pm_mock_declined') declined.add(id);
-      const last4 = paymentMethodToken.replace('pm_mock_', '').slice(-4);
-      return { paymentMethodId: id, label: declined.has(id) ? 'Card (declined test)' : `Card ending ${last4}` };
+      const bank = paymentMethodToken.startsWith('pm_mock_bank_');
+      const last4 = paymentMethodToken.replace('pm_mock_bank_', '').replace('pm_mock_', '').slice(-4);
+      return {
+        paymentMethodId: id,
+        type: bank ? 'bank' : 'card',
+        label: declined.has(id) ? 'Card (declined test)' : bank ? `Bank account ending ${last4}` : `Card ending ${last4}`,
+      };
     },
     async createSubscription({ paymentMethodId, priceCents }) {
       if (declined.has(paymentMethodId)) {

@@ -5,6 +5,7 @@ import { getPaymentAdapter } from '../integrations/payments/index.js';
 import { sendMail } from '../lib/mailer.js';
 import { env } from '../config/env.js';
 import { weekdaySlots } from '../lib/businessTime.js';
+import { onSubscriptionPayment } from './paymentReporting.service.js';
 
 /**
  * Billing (approved 2026-09-12): monthly plan subscriptions (Steady/Focused/Express),
@@ -46,12 +47,19 @@ async function termsVersion() {
 }
 
 /** Consent sentence rendered at checkout and stored verbatim (negative-option rule). */
-export function consentText({ planName, priceCents }) {
-  return `I agree to pay ${money(priceCents)} per month for the CHASE HomePath ${planName} plan. ` +
+export function consentText({ planName, priceCents, methodType = 'card' }) {
+  const base = `I agree to pay ${money(priceCents)} per month for the CHASE HomePath ${planName} plan. ` +
     'This renews automatically each month until I cancel. I can cancel anytime in the app ' +
     'with one tap and will not be charged again after the current month. This plan is ' +
     'homeownership education and planning, not credit repair. No credit or purchase ' +
     'outcome is promised.';
+  if (methodType !== 'bank') return base;
+  // NACHA-required ACH debit authorization language.
+  return `${base} I authorize CHASE HomePath (TRG Tech Link) to electronically debit my bank account ` +
+    `for ${money(priceCents)} on or about the same day each month, and to debit any session I book at ` +
+    'the price shown when I book it. This authorization stays in effect until I cancel in the app or ' +
+    'notify support@chasehomepath.com, allowing reasonable time to act. If a debit is returned unpaid, ' +
+    'I understand it may be retried once.';
 }
 
 async function liveSubscription(memberId) {
@@ -69,7 +77,7 @@ function subView(s) {
   if (!s) return null;
   return {
     id: s.id, planCode: s.plan_code, planName: s.plan_name, targetMonths: s.target_months,
-    status: s.status, priceCents: s.price_cents, paymentMethod: s.payment_method_label,
+    status: s.status, priceCents: s.price_cents, paymentMethod: s.payment_method_label, paymentMethodType: s.payment_method_type ?? 'card',
     currentPeriodStart: s.current_period_start, currentPeriodEnd: s.current_period_end,
     cancelAtPeriodEnd: s.cancel_at_period_end, cancelledAt: s.cancelled_at, startedAt: s.created_at,
   };
@@ -129,7 +137,7 @@ export async function subscribe(member, { planCode, paymentMethodToken, consentA
   const processor = getPaymentAdapter();
   const { customerId } = await processor.createCustomer({ email: member.email, name: member.name, memberId: member.id });
   const pm = await processor.attachPaymentMethod({ customerId, paymentMethodToken });
-  const text = consentText({ planName: plan.name, priceCents: plan.price_cents });
+  const text = consentText({ planName: plan.name, priceCents: plan.price_cents, methodType: pm.type ?? 'card' });
   const version = await termsVersion();
 
   const result = await processor.createSubscription({
@@ -137,7 +145,7 @@ export async function subscribe(member, { planCode, paymentMethodToken, consentA
     metadata: { memberId: member.id },
   });
 
-  if (result.status !== 'active') {
+  if (result.status !== 'active' && result.status !== 'pending') {
     await query(
       `INSERT INTO payments (member_id, kind, amount_cents, status, description, processor, processor_ref, failure_reason)
        VALUES ($1,'subscription',$2,'failed',$3,$4,$5,$6)`,
@@ -149,16 +157,16 @@ export async function subscribe(member, { planCode, paymentMethodToken, consentA
   const sub = await withTransaction(async (q) => {
     const { rows } = await q(
       `INSERT INTO subscriptions (member_id, plan_code, status, price_cents, processor, processor_customer_id,
-              processor_subscription_id, payment_method_label, current_period_start, current_period_end,
+              processor_subscription_id, payment_method_label, payment_method_type, current_period_start, current_period_end,
               consent_text, consent_terms_version, consent_ip)
-       VALUES ($1,$2,'active',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [member.id, planCode, plan.price_cents, processor.name, customerId, result.subscriptionId, pm.label,
+       VALUES ($1,$2,'active',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [member.id, planCode, plan.price_cents, processor.name, customerId, result.subscriptionId, pm.label, pm.type ?? 'card',
         result.periodStart, result.periodEnd, text, version, actor?.reqMeta?.ip ?? null],
     );
     await q(
       `INSERT INTO payments (member_id, subscription_id, kind, amount_cents, status, description, processor, processor_ref)
-       VALUES ($1,$2,'subscription',$3,'succeeded',$4,$5,$6)`,
-      [member.id, rows[0].id, plan.price_cents, `${plan.name} plan, first month`, processor.name, result.invoiceRef ?? null],
+       VALUES ($1,$2,'subscription',$3,$7,$4,$5,$6)`,
+      [member.id, rows[0].id, plan.price_cents, `${plan.name} plan, first month`, processor.name, result.invoiceRef ?? null, result.status === 'pending' ? 'pending' : 'succeeded'],
     );
     // Tier drives the milestone cadence elsewhere; keep members.membership_tier in step.
     await q(`UPDATE members SET membership_tier = $2 WHERE id = $1`, [member.id, { steady: 1, focused: 2, express: 3 }[planCode] ?? 1]);
@@ -170,6 +178,7 @@ export async function subscribe(member, { planCode, paymentMethodToken, consentA
     entityType: 'subscription', entityId: sub.id, metadata: { planCode, priceCents: plan.price_cents, processor: processor.name },
     ip: actor?.reqMeta?.ip ?? null, userAgent: actor?.reqMeta?.userAgent ?? null,
   });
+  onSubscriptionPayment(member.id);
   sendReceipt(member.email, {
     subject: `Your CHASE HomePath ${plan.name} plan is active`,
     lines: [
@@ -382,6 +391,7 @@ export async function handleWebhook(event) {
          VALUES ($1,$2,'subscription',$3,'succeeded',$4,$5,$6) ON CONFLICT (processor, processor_ref) WHERE processor_ref IS NOT NULL DO NOTHING`,
         [sub.member_id, sub.id, obj.amount_paid ?? sub.price_cents, 'Plan renewal', processor, obj.id],
       );
+      onSubscriptionPayment(sub.member_id);
     }
   } else if (event.type === 'invoice.payment_failed' && obj.subscription) {
     const { rows: subs } = await query(`SELECT * FROM subscriptions WHERE processor_subscription_id = $1`, [obj.subscription]);

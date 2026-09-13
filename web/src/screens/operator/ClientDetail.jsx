@@ -12,10 +12,12 @@ export default function ClientDetail() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [bill, setBill] = useState(null);
+  const [ready, setReady] = useState(null);
 
   useEffect(() => {
     operator.client(memberId).then(setData).catch((e) => setError(e.message));
     billingApi.operatorMember(memberId).then(setBill).catch(() => setBill({ subscription: null, payments: [], sessions: [] }));
+    billingApi.operatorReadiness(memberId).then(setReady).catch(() => setReady(false));
   }, [memberId]);
 
   async function mark(id, status) {
@@ -68,6 +70,22 @@ export default function ClientDetail() {
             <div className="op-msg" key={m.id}>{m.body}</div>
           ))}
           {data.messages.length === 0 && <div className="muted-card">No messages.</div>}
+        </section>
+
+        <section className="card">
+          <div className="h2" style={{ marginTop: 0 }}>Readiness</div>
+          {ready === null ? <div className="loading">Loading…</div> : ready === false ? <div className="muted-card">Not available.</div> : (
+            <>
+              <div className="kv"><span>Status</span><span className={`hbadge ${ready.today.readyNow ? 'green' : 'amber'}`}>{ready.today.readyNow ? 'lender-ready basics' : 'not ready'}</span></div>
+              <div className="kv"><span>Score on file</span><span>{ready.inputs.creditScore ?? (ready.scoreWithheld ? 'withheld' : 'none')}</span></div>
+              <div className="kv"><span>Income / DTI</span><span>{ready.inputs.annualIncome ? `$${Math.round(ready.inputs.annualIncome).toLocaleString()}` : 'n/a'}{ready.inputs.dti != null ? ` / ${Math.round(ready.inputs.dti * 100)}%` : ''}</span></div>
+              <div className="kv"><span>Est. max price</span><span>{ready.today.estimatedMaxPrice ? `$${ready.today.estimatedMaxPrice.toLocaleString()}` : 'n/a'}</span></div>
+              <div className="kv"><span>Recommended pace</span><span style={{ textTransform: 'capitalize' }}>{ready.recommendedPlan}</span></div>
+              {ready.programs.map((p) => <div key={p.code} className="kv"><span>{p.name}</span><span>{p.ready ? 'meets marks' : p.gaps.filter((g) => !g.info).map((g) => g.code).join(', ') || 'ok'}</span></div>)}
+              {ready.today.documentGaps.length > 0 && <div className="kv"><span>Docs missing</span><span>{ready.today.documentGaps.join('; ')}</span></div>}
+              {ready.training.length > 0 && <div className="kv"><span>Extra training</span><span>{ready.training.map((t) => t.title.split(':')[0]).join('; ')}</span></div>}
+            </>
+          )}
         </section>
 
         <section className="card">

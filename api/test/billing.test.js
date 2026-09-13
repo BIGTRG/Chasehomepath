@@ -340,3 +340,48 @@ test('consultation booking returns a room code and the member can open the room'
   const room = await (await call('GET', `/api/meet/${code}`, undefined, token)).json();
   assert.equal(room.room.title, 'First consultation');
 });
+
+test('ACH bank token: subscription stores bank method and NACHA authorization text', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const token = await newMember();
+  const r = await call('POST', '/api/billing/subscribe', { planCode: 'steady', paymentMethodToken: 'pm_mock_bank_6789', consentAccepted: true }, token);
+  assert.equal(r.status, 201);
+  const { subscription } = await r.json();
+  assert.equal(subscription.paymentMethodType, 'bank');
+  assert.equal(subscription.paymentMethod, 'Bank account ending 6789');
+  const { rows } = await pool.query(`SELECT consent_text FROM subscriptions WHERE id = $1`, [subscription.id]);
+  assert.match(rows[0].consent_text, /authorize CHASE HomePath .* to electronically debit/);
+});
+
+test('payment reporting: nothing queued without opt-in; opt-in backfills and dispatches via adapter', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const token = await newMember();
+  await call('POST', '/api/billing/subscribe', { planCode: 'focused', paymentMethodToken: 'pm_mock_bank_1111', consentAccepted: true }, token);
+  let st = await (await call('GET', '/api/billing/reporting', undefined, token)).json();
+  assert.equal(st.optedIn, false);
+  assert.equal(st.events.length, 0);
+  assert.match(st.consentText, /late or missed payments may also be reported/);
+  st = await (await call('POST', '/api/billing/reporting/opt-in', { optIn: true }, token)).json();
+  assert.equal(st.optedIn, true);
+  assert.equal(st.events.length, 1);
+  assert.equal(st.events[0].onTime, true);
+  assert.equal(st.events[0].amountCents, 18900);
+  assert.equal(st.events[0].status, 'acknowledged');
+  st = await (await call('POST', '/api/billing/reporting/opt-in', { optIn: false }, token)).json();
+  assert.equal(st.optedIn, false);
+});
+
+test('readiness endpoint runs on a fresh member and assigns extra training modules', async (t) => {
+  if (!dbUp) return t.skip('no database reachable');
+  const token = await newMember();
+  await call('POST', '/api/intake', { householdIncome: 52000, targetArea: 'Durham, NC' }, token);
+  const r = await call('GET', '/api/billing/readiness', undefined, token);
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.programs.length, 3);
+  assert.ok(d.training.length >= 1);
+  assert.match(d.disclaimer, /Not a loan offer/);
+  const learn = await (await call('GET', '/api/learn', undefined, token)).json();
+  const titles = JSON.stringify(learn);
+  assert.match(titles, /Credit deep dive|savings system/);
+});

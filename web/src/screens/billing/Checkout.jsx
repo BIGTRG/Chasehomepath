@@ -12,6 +12,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const [catalog, setCatalog] = useState(null);
   const [token, setToken] = useState(null);
+  const [methodLabel, setMethodLabel] = useState(null);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -54,11 +55,16 @@ export default function Checkout() {
       {error && <div className="error">{error}</div>}
 
       <div className="h2">Payment</div>
-      <PaymentField processor={catalog.processor} onToken={(t) => setToken(t)} />
+      <PaymentField processor={catalog.processor} onToken={(t, l) => { setToken(t); setMethodLabel(l); }} />
 
       <label className="consent">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-        <span>{plan.consentText}</span>
+        <span>
+          {plan.consentText}
+          {methodLabel?.startsWith('Bank') && (
+            <> I authorize CHASE HomePath (TRG Tech Link) to electronically debit my bank account for {money(plan.priceCents)} on or about the same day each month, and for any session I book at the price shown when I book it. This authorization stays in effect until I cancel in the app or notify support@chasehomepath.com. A returned debit may be retried once.</>
+          )}
+        </span>
       </label>
 
       <button type="button" className="btn" disabled={!token || !consent || busy} onClick={pay}>

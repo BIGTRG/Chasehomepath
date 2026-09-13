@@ -214,6 +214,11 @@ export const billing = {
   joinGroup: (id, body) => api(`/billing/group-sessions/${id}/join`, { method: 'POST', body }),
   createGroup: (body) => api('/billing/operator/group-sessions', { method: 'POST', body }),
   operatorSummary: () => api('/billing/operator/summary'),
+  reporting: () => api('/billing/reporting'),
+  reportingOptIn: (optIn) => api('/billing/reporting/opt-in', { method: 'POST', body: { optIn } }),
+  readiness: () => api('/billing/readiness'),
+  operatorReadiness: (memberId) => api(`/billing/operator/members/${memberId}/readiness`),
+  operatorReporting: () => api('/billing/operator/reporting'),
   operatorMember: (memberId) => api(`/billing/operator/members/${memberId}`),
   markSession: (id, status) => api(`/billing/operator/sessions/${id}/mark`, { method: 'POST', body: { status } }),
 };
