@@ -557,3 +557,26 @@ body {
 .rb.danger { border-color: #d96b6b; color: #ffb3b3; }
 .rb:disabled { opacity: .4; }
 .room-legal { color: #9aa6c4; text-align: center; }
+
+/* Generic input + textarea (budget, letters) */
+.input, .field textarea, textarea.letter {
+  width: 100%; padding: 12px 14px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px;
+  background: #fff; color: var(--ink); font-family: inherit; box-sizing: border-box;
+}
+.input:focus, .field textarea:focus, textarea.letter:focus { outline: 2px solid var(--orange); outline-offset: 0; border-color: var(--orange); }
+textarea.letter { min-height: 420px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; resize: vertical; }
+.letter-paper { white-space: pre-wrap; font-size: 14px; line-height: 1.55; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.steps { padding-left: 20px; margin: 6px 0 0; }
+.steps li { font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+.timeline .row { align-items: flex-start; }
+.timeline .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); margin-top: 6px; flex: none; }
+.timeline .dot.g { background: var(--green); }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { margin-top: 0; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.print-letter { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .print-letter, .print-letter * { visibility: visible; }
+  .print-letter { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 0.75in; font: 12pt/1.5 Georgia, 'Times New Roman', serif; white-space: pre-wrap; color: #000; }
+}

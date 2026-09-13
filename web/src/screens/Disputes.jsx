@@ -1,38 +1,36 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { credit as creditApi } from '../api/client.js';
+import { COUNSELOR } from '../brand.js';
 
-// Dispute tracker (spec §4.11): all disputes with status + day count. Read-only list;
-// members act on individual items from the credit detail screen.
+const fmt = (d) => (d ? new Date(String(d).length === 10 ? `${d}T12:00:00` : d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');
+
+// Dispute tracker: every case the member opened, with Maren's next step on each.
 export default function Disputes() {
-  const [disputes, setDisputes] = useState(null);
+  const [cases, setCases] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    creditApi.disputes().then((d) => setDisputes(d.disputes)).catch((e) => setError(e.message));
-  }, []);
+  useEffect(() => { creditApi.cases().then((d) => setCases(d.cases)).catch((e) => setError(e.message)); }, []);
 
   if (error) return <div className="content"><div className="error">{error}</div></div>;
-  if (!disputes) return <div className="loading">Loading…</div>;
+  if (!cases) return <div className="loading">Loading…</div>;
 
   return (
     <div className="content">
-      <h1 className="h1">Disputes</h1>
-      <p className="sub">Every dispute here was started by you. We track each one's progress.</p>
+      <h1 className="h1">Your disputes</h1>
+      <p className="sub">Every one started by you. {COUNSELOR.name} drafts and tracks; you sign and send.</p>
 
-      {disputes.length === 0 && (
-        <div className="card muted-card">No disputes yet. You start them from a credit item.</div>
-      )}
+      {cases.length === 0 && <div className="card muted-card">No disputes yet. Open any item marked "Look inaccurate" on your Credit tab to start one.</div>}
 
-      {disputes.map((d) => (
-        <div className="card" key={d.id}>
+      {cases.map((c) => (
+        <Link to={`/credit/cases/${c.id}`} className="card" key={c.id} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
           <div className="item-top">
-            <span className="item-creditor">{d.creditor}</span>
-            <span className={`badge status-${d.status}`}>{d.status}</span>
+            <span className="item-creditor">{c.creditor}</span>
+            <span className={`badge status-${c.status}`}>{c.status === 'resolved' ? c.outcome : c.status}</span>
           </div>
-          <div className="item-meta">
-            {d.type} · {d.method || 'online'} · filed {new Date(d.filed_at).toLocaleDateString()} · day {d.day_count}
-          </div>
-        </div>
+          <div className="item-meta">{c.reasonLabel} · round {c.round}{c.dueAt && ['filed', 'investigating'].includes(c.status) ? ` · answer by ${fmt(c.dueAt)} · day ${c.dayCount}` : ''}</div>
+          <div className="s" style={{ marginTop: 6, color: 'var(--orange-dark)', fontWeight: 600 }}>{c.next.title} ›</div>
+        </Link>
       ))}
     </div>
   );

@@ -26,6 +26,9 @@ import Disputes from './screens/Disputes.jsx';
 import Money from './screens/Money.jsx';
 import BudgetSetup from './screens/BudgetSetup.jsx';
 import ScoreTrend from './screens/ScoreTrend.jsx';
+import DisputeStart from './screens/DisputeStart.jsx';
+import DisputeCase from './screens/DisputeCase.jsx';
+import LetterView from './screens/LetterView.jsx';
 import Team from './screens/Team.jsx';
 import Learn from './screens/Learn.jsx';
 import Marketplace from './screens/Marketplace.jsx';
@@ -95,6 +98,9 @@ function MemberSurface() {
           <Route path="/" element={<PlanHome />} />
           <Route path="/credit" element={<Credit />} />
           <Route path="/credit/items/:id" element={<CreditItem />} />
+          <Route path="/credit/items/:id/dispute" element={<DisputeStart />} />
+          <Route path="/credit/cases/:id" element={<DisputeCase />} />
+          <Route path="/credit/letters/:id" element={<LetterView />} />
           <Route path="/money" element={<Money />} />
           <Route path="/money/setup" element={<BudgetSetup />} />
           <Route path="/credit/scores" element={<ScoreTrend />} />

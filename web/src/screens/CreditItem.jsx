@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { credit as creditApi } from '../api/client.js';
 import ScreenTop from '../components/ScreenTop.jsx';
+import { COUNSELOR } from '../brand.js';
 
 // Walkthrough screen 8: the engine explains the rule and the rights — nothing
 // pre-selected. The member chooses and clicks submit. That's what keeps it DIY. (§4.9)
@@ -10,7 +11,6 @@ export default function CreditItem() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -20,31 +20,6 @@ export default function CreditItem() {
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
-
-  async function fileDispute() {
-    setBusy(true);
-    setError(null);
-    try {
-      await creditApi.dispute(id);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function withdraw(disputeId) {
-    setBusy(true);
-    try {
-      await creditApi.withdraw(disputeId);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (error) return <div className="content"><div className="error">{error}</div></div>;
   if (!data) return <div className="loading">Loading…</div>;
@@ -81,22 +56,20 @@ export default function CreditItem() {
 
       {canDispute ? (
         hasOpenDispute ? (
-          <div className="card">
+          <div className="card hl">
             <p style={{ marginTop: 0, fontSize: 14 }}>
-              You filed a dispute on this item{openDispute ? ` (day ${openDispute.day_count})` : ''}. It's in progress.
+              You have a dispute open on this item{openDispute?.status !== 'draft' ? ` (day ${openDispute.day_count})` : ''}. {COUNSELOR.name} has your next step.
             </p>
-            <button className="btn secondary" onClick={() => withdraw(openDispute.id)} disabled={busy}>
-              Withdraw dispute
-            </button>
+            <button className="btn" onClick={() => navigate(`/credit/cases/${openDispute.id}`)}>Open the case</button>
           </div>
         ) : (
-          <button className="btn" onClick={fileDispute} disabled={busy}>
-            {busy ? 'Filing…' : 'I want to dispute this'}
+          <button className="btn" onClick={() => navigate(`/credit/items/${id}/dispute`)}>
+            I want to question this
           </button>
         )
       ) : (
         <div className="card muted-card">
-          This item looks accurate, so a dispute isn't the right tool. Talk with your specialist about the options above.
+          This item looks accurate, so a dispute isn't the right tool. Paying it down is the honest path; your paydown plan shows the order.
         </div>
       )}
 
