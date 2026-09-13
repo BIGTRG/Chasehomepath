@@ -22,6 +22,7 @@ export default function OperatorLayout() {
           <NavLink to="/team">Team</NavLink>
           <NavLink to="/inventory">Inventory</NavLink>
           {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
+          {isManager && <NavLink to="/billing">Billing</NavLink>}
           {isAdmin && <NavLink to="/admin">HQ Admin</NavLink>}
         </nav>
         <button className="btn secondary op-signout" onClick={logout}>Sign out</button>

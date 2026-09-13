@@ -175,6 +175,7 @@ export const operator = {
   retire: (id) => api(`/operator/inventory/${id}/retire`, { method: 'POST' }),
   users: (role) => api(`/operator/users${role ? `?role=${role}` : ''}`),
   patchUser: (id, body) => api(`/operator/users/${id}`, { method: 'PATCH', body }),
+  patchStaff: (userId, body) => api(`/operator/team/${userId}`, { method: 'PATCH', body }),
   programs: () => api('/operator/programs'),
 };
 
@@ -197,4 +198,32 @@ export const partner = {
   publish: (body) => api('/partner/listings', { method: 'POST', body }),
   certify: (licenseType, licenseNumber) =>
     api('/partner/certification', { method: 'POST', body: { licenseType, licenseNumber } }),
+};
+
+export const billing = {
+  plans: () => api('/billing/plans', { auth: false }),
+  me: () => api('/billing/me'),
+  subscribe: (body) => api('/billing/subscribe', { method: 'POST', body }),
+  cancel: () => api('/billing/cancel', { method: 'POST' }),
+  resume: () => api('/billing/resume', { method: 'POST' }),
+  changePlan: (planCode) => api('/billing/change-plan', { method: 'POST', body: { planCode } }),
+  sessionSlots: () => api('/billing/sessions/slots'),
+  bookSession: (body) => api('/billing/sessions', { method: 'POST', body }),
+  cancelSession: (id) => api(`/billing/sessions/${id}/cancel`, { method: 'POST' }),
+  counseling: () => api('/billing/counseling', { auth: Boolean(tokens.access) }),
+  joinGroup: (id, body) => api(`/billing/group-sessions/${id}/join`, { method: 'POST', body }),
+  createGroup: (body) => api('/billing/operator/group-sessions', { method: 'POST', body }),
+  operatorSummary: () => api('/billing/operator/summary'),
+  operatorMember: (memberId) => api(`/billing/operator/members/${memberId}`),
+  markSession: (id, status) => api(`/billing/operator/sessions/${id}/mark`, { method: 'POST', body: { status } }),
+};
+
+export const meet = {
+  info: (code) => api(`/meet/${code}`),
+  signal: (code, body) => api(`/meet/${code}/signal`, { method: 'POST', body }),
+  eventsUrl: (code) => `/api/meet/${code}/events?access_token=${encodeURIComponent(tokens.access || '')}`,
+};
+
+export const agentReview = {
+  planReview: () => api('/agent/plan-review'),
 };

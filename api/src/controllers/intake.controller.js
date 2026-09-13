@@ -37,7 +37,7 @@ export async function checklist(req, res) {
 }
 
 const docSchema = z.object({
-  docType: z.enum(['photo_id', 'pay_stub_1', 'pay_stub_2', 'employment', 'co_applicant_id', 'other']),
+  docType: z.enum(['photo_id', 'pay_stub_1', 'pay_stub_2', 'employment', 'co_applicant_id', 'tax_return_1', 'tax_return_2', 'w2_1', 'w2_2', 'other']),
   fileName: z.string().trim().min(1).max(200),
   mimeType: z.string().trim().min(3).max(100),
   dataBase64: z.string().min(1),

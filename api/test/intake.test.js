@@ -17,9 +17,10 @@ test('generateSlots returns future weekday slots only', () => {
   assert.deepEqual(times, [...times].sort((a, b) => a - b));
 });
 
-test('checklist covers the six walkthrough items with bank_link satisfied by Plaid', () => {
-  assert.equal(CHECKLIST.length, 6);
+test('checklist covers the walkthrough items plus tax returns and W-2s (Deon, 2026-09-12)', () => {
+  assert.equal(CHECKLIST.length, 10);
   const types = CHECKLIST.map((c) => c.docType);
+  for (const t of ['tax_return_1', 'tax_return_2', 'w2_1', 'w2_2']) assert.ok(types.includes(t), t);
   assert.ok(types.includes('photo_id'));
   assert.ok(types.includes('bank_link'));
   assert.ok(types.includes('pay_stub_1'));

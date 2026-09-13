@@ -16,6 +16,8 @@ import smartcreditRoutes from './smartcredit.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import homeownerRoutes from './homeowner.routes.js';
 import intakeRoutes from './intake.routes.js';
+import billingRoutes from './billing.routes.js';
+import meetRoutes from './meet.routes.js';
 
 const router = Router();
 
@@ -36,6 +38,8 @@ router.use('/smartcredit', smartcreditRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/home', homeownerRoutes);
 router.use('/intake', intakeRoutes);
+router.use('/billing', billingRoutes);
+router.use('/meet', meetRoutes);
 
 // All 13 phases mounted. Later work extends these.
 

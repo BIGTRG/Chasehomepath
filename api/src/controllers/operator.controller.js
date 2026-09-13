@@ -49,6 +49,18 @@ export async function patchUser(req, res) {
   res.json({ user: await admin.setUserRoleStatus(req.params.id, body, actorFrom(req)) });
 }
 
+const staffPatch = z.object({
+  role: z.enum(['specialist', 'manager', 'admin']).optional(),
+  title: z.string().optional(),
+  capacityTarget: z.number().int().optional(),
+  status: z.enum(['active', 'suspended']).optional(),
+});
+/** PATCH /api/operator/team/:userId — Team screen role editor (manager/admin). */
+export async function patchStaff(req, res) {
+  const body = staffPatch.parse(req.body);
+  res.json({ staff: await operator.updateStaff(actorFrom(req), req.params.userId, body) });
+}
+
 export async function programs(_req, res) {
   res.json({ programs: await admin.listPrograms() });
 }

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { weekdaySlots } from '../lib/businessTime.js';
 import { query } from '../db/pool.js';
 import { audit } from '../lib/audit.js';
 import { ValidationError } from '../lib/errors.js';
@@ -21,6 +22,10 @@ export const CHECKLIST = Object.freeze([
   { docType: 'bank_link', label: 'Bank linked via Plaid' },
   { docType: 'employment', label: 'Employer & time on job' },
   { docType: 'pay_stub_2', label: 'Second pay stub' },
+  { docType: 'w2_1', label: 'W-2, most recent year' },
+  { docType: 'w2_2', label: 'W-2, prior year' },
+  { docType: 'tax_return_1', label: 'Tax return, most recent year' },
+  { docType: 'tax_return_2', label: 'Tax return, prior year' },
   { docType: 'co_applicant_id', label: 'Co-applicant ID' },
 ]);
 
@@ -126,27 +131,7 @@ export async function saveDocument(memberId, { docType, fileName, mimeType, data
  * real calendars arrive when the video/scheduling adapter is wired (§7).
  */
 export function generateSlots(now = new Date(), count = 6) {
-  const times = [
-    { h: 10, m: 30 },
-    { h: 14, m: 15 },
-    { h: 16, m: 0 },
-  ];
-  const slots = [];
-  const d = new Date(now);
-  d.setDate(d.getDate() + 1);
-  while (slots.length < count) {
-    const day = d.getDay();
-    if (day !== 0 && day !== 6) {
-      for (const t of times) {
-        if (slots.length >= count) break;
-        const s = new Date(d);
-        s.setHours(t.h, t.m, 0, 0);
-        slots.push(s.toISOString());
-      }
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  return slots;
+  return weekdaySlots(now, [{ h: 10, m: 30 }, { h: 14, m: 15 }, { h: 16, m: 0 }], count);
 }
 
 /**
@@ -181,7 +166,7 @@ export async function bookConsultation(memberId, { type, scheduledAt }, actor) {
   const { rows } = await query(
     `INSERT INTO appointments (member_id, participant_id, type, scheduled_at, is_consultation)
      VALUES ($1, $2, $3, $4, true)
-     RETURNING id, type, scheduled_at, status, is_consultation`,
+     RETURNING id, type, scheduled_at, status, is_consultation, room_code`,
     [memberId, participantId, type, when.toISOString()],
   );
   await audit({

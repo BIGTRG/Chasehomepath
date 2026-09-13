@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireMemberByUserId } from '../services/member.service.js';
 import { answerQuestion } from '../services/agent.service.js';
 import { getAssistanceForMember } from '../services/assistance.service.js';
+import { buildPlanReview } from '../services/planReview.service.js';
 
 const actorFrom = (req) => ({
   userId: req.user.id,
@@ -22,4 +23,10 @@ export async function ask(req, res) {
 export async function assistance(req, res) {
   const member = await requireMemberByUserId(req.user.id);
   res.json(await getAssistanceForMember(member, actorFrom(req)));
+}
+
+/** GET /api/agent/plan-review — AI counselor walkthrough steps built from the member's own file. */
+export async function planReview(req, res) {
+  const member = await requireMemberByUserId(req.user.id);
+  res.json(await buildPlanReview(member));
 }

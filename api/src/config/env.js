@@ -96,6 +96,17 @@ export const env = {
     licenseLookup: optional('LICENSE_LOOKUP_ADAPTER', 'mock'),
     video: optional('VIDEO_ADAPTER', 'mock'),
     anthropic: optional('ANTHROPIC_ADAPTER', 'mock'),
+    payment: optional('PAYMENT_ADAPTER', 'mock'),
+  },
+
+  payments: {
+    stripe: {
+      secretKey: optional('STRIPE_SECRET_KEY', ''),
+      publishableKey: optional('STRIPE_PUBLISHABLE_KEY', ''),
+      webhookSecret: optional('STRIPE_WEBHOOK_SECRET', ''),
+      // Point at the GE API Engine proxy to keep the key in the engine vault.
+      baseUrl: optional('STRIPE_BASE_URL', ''),
+    },
   },
 };
 

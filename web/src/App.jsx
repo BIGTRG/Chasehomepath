@@ -31,6 +31,16 @@ import PlanToLot from './screens/PlanToLot.jsx';
 import Agent from './screens/Agent.jsx';
 import Homeowner from './screens/Homeowner.jsx';
 import SmartCredit from './screens/SmartCredit.jsx';
+import PlanReview from './screens/PlanReview.jsx';
+
+// Billing + counseling
+import Plans from './screens/billing/Plans.jsx';
+import Checkout from './screens/billing/Checkout.jsx';
+import Billing from './screens/billing/Billing.jsx';
+import BookSession from './screens/billing/BookSession.jsx';
+import Counseling from './screens/billing/Counseling.jsx';
+import GroupPay from './screens/billing/GroupPay.jsx';
+import Meet from './screens/meet/Meet.jsx';
 
 // Operator surface
 import Roster from './screens/operator/Roster.jsx';
@@ -39,6 +49,7 @@ import TeamDash from './screens/operator/TeamDash.jsx';
 import Inventory from './screens/operator/Inventory.jsx';
 import Admin from './screens/operator/Admin.jsx';
 import Onboarding from './screens/operator/Onboarding.jsx';
+import BillingDash from './screens/operator/BillingDash.jsx';
 
 // Partner surface
 import PartnerHome from './screens/partner/PartnerHome.jsx';
@@ -56,6 +67,12 @@ function MemberSurface() {
         <Route path="/prep" element={<Prep />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/checkout/:planCode" element={<Checkout />} />
+        <Route path="/counseling" element={<Counseling />} />
+        <Route path="/group/:id/pay" element={<GroupPay />} />
+        <Route path="/meet/:code" element={<Meet />} />
+        <Route path="/plan-review" element={<PlanReview />} />
         <Route element={<MemberLayout />}>
           <Route path="/" element={<PlanHome />} />
           <Route path="/credit" element={<Credit />} />
@@ -69,6 +86,8 @@ function MemberSurface() {
           <Route path="/home" element={<Homeowner />} />
           <Route path="/smartcredit" element={<SmartCredit />} />
           <Route path="/disputes" element={<Disputes />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/sessions/book" element={<BookSession />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -85,8 +104,10 @@ function OperatorSurface() {
         <Route path="/team" element={<TeamDash />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/billing" element={<BillingDash />} />
         <Route path="/admin" element={<Admin />} />
       </Route>
+      <Route path="/meet/:code" element={<Meet />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -112,6 +133,8 @@ function AuthSurface() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/forgot" element={<Forgot />} />
         <Route path="/reset" element={<Reset />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/counseling" element={<Counseling />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>

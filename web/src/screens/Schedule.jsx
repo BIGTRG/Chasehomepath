@@ -21,7 +21,7 @@ const fmtSlot = (iso) => {
 export default function Schedule() {
   const navigate = useNavigate();
   const [slots, setSlots] = useState(null);
-  const [type, setType] = useState('in_person');
+  const [type, setType] = useState('video');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,19 +48,19 @@ export default function Schedule() {
 
       {error && <div className="error">{error}</div>}
 
+      <button type="button" className={`opt ${type === 'video' ? 'sel' : ''}`} onClick={() => setType('video')}>
+        <span>
+          <span className="n">Video meeting · recommended</span>
+          <span className="s" style={{ display: 'block' }}>45 minutes with your specialist in our video room, from home</span>
+        </span>
+        {type === 'video' && <span className="dot-sel" />}
+      </button>
       <button type="button" className={`opt ${type === 'in_person' ? 'sel' : ''}`} onClick={() => setType('in_person')}>
         <span>
-          <span className="n">In person · recommended</span>
+          <span className="n">In person</span>
           <span className="s" style={{ display: 'block' }}>Meet your team, leave with a plan</span>
         </span>
         {type === 'in_person' && <span className="dot-sel" />}
-      </button>
-      <button type="button" className={`opt ${type === 'video' ? 'sel' : ''}`} onClick={() => setType('video')}>
-        <span>
-          <span className="n">Video meeting</span>
-          <span className="s" style={{ display: 'block' }}>Same plan, from home</span>
-        </span>
-        {type === 'video' && <span className="dot-sel" />}
       </button>
 
       <div className="lbl">Open times</div>

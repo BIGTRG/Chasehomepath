@@ -4,7 +4,7 @@ import LegalLayout from './LegalLayout.jsx';
 // (CROA, NC Credit Repair Services Act, FCRA, GLBA, RESPA, NCGS 93A).
 export default function Terms() {
   return (
-    <LegalLayout title="Terms of Service" updated="July 30, 2026">
+    <LegalLayout title="Terms of Service" updated="September 13, 2026">
       <h2>1. Who we are</h2>
       <p>
         CHASE HomePath ("we", "us", "the Service") is a homeownership planning platform operated by
@@ -88,12 +88,35 @@ export default function Terms() {
           your account stops all processing except records we must keep by law.</li>
       </ul>
 
-      <h2>8. Fees</h2>
+      <h2>8. Fees, plans, and cancellation</h2>
       <p>
-        Creating an account and using the planning features is free. If any paid feature is ever
-        introduced, its price, terms, and cancellation rights will be presented to you clearly before
-        you pay, in a written agreement that complies with applicable federal and North Carolina law.
-        We do not accept advance payment for any credit-related service.
+        Creating an account, qualifying, and your first consultation are free. To use the full
+        HomePath plan you choose a monthly plan: Steady ($149 per month, 12-month target), Focused
+        ($189 per month, 9-month target), or Express ($249 per month, 6-month target). Prices are
+        shown before you pay and locked for as long as you stay on that plan.
+      </p>
+      <ul>
+        <li><b>Monthly renewal.</b> Your plan renews automatically each month on the day you started
+          until you cancel. You agree to this at checkout in a statement we keep on file.</li>
+        <li><b>Cancel anytime.</b> Cancel with one tap from Billing in the app. You keep access through
+          the end of the month you have paid for and are not charged again. No cancellation fee.</li>
+        <li><b>Counseling sessions.</b> One-on-one counseling ($89 per 45-minute session) and group
+          sessions (price shown before booking) are optional and separate from any plan. They are
+          not included in any plan tier. A session cancelled at least 24 hours in advance is refunded in
+          full; later cancellations and no-shows are not refunded.</li>
+        <li><b>Failed payments.</b> If a renewal payment fails we will tell you and retry. Access may
+          pause until payment succeeds.</li>
+        <li><b>What the fee is for.</b> Plan and session fees pay for homeownership education,
+          planning, budgeting and savings tools, curriculum, marketplace access, and your team's time.
+          No fee is charged for disputing, improving, or repairing your credit. The AI dispute helper
+          is free to every member and only prepares letters you choose to send yourself.</li>
+        <li><b>Third-party charges.</b> Credit monitoring you enroll in through a provider such as
+          SmartCredit, and any consultation fee for a pulled credit report, are the provider's charges
+          under its terms and are disclosed to you before you enroll.</li>
+      </ul>
+      <p>
+        Prices may change for new plans; an active plan keeps its price. Refund questions go to
+        support@chasehomepath.com.
       </p>
 
       <h2>9. Acceptable use</h2>

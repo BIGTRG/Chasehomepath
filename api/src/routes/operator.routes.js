@@ -18,6 +18,7 @@ router.get('/inventory', authorize(...STAFF_ROLES), asyncHandler(op.inventory));
 // Manager/admin: team capacity, ratings, inventory retire.
 router.get('/capacity', authorize('manager', 'admin'), asyncHandler(op.capacity));
 router.get('/ratings', authorize('manager', 'admin'), asyncHandler(op.ratings));
+router.patch('/team/:userId', authorize('manager', 'admin'), asyncHandler(op.patchStaff));
 router.post('/inventory/:id/retire', authorize('manager', 'admin'), asyncHandler(op.retire));
 
 // HQ admin only: user/role administration + program config.

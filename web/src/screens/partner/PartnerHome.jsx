@@ -59,7 +59,7 @@ export default function PartnerHome() {
   return (
     <div className="op-shell">
       <aside className="op-side">
-        <div className="op-brand">Chase<span className="path">HomePath</span><div className="op-role">partner portal</div></div>
+        <div className="op-brand"><span className="brand-logo-chip"><img src="/logo.png" alt="CHASE HomePath" className="brand-logo" /></span><div className="op-role">partner portal</div></div>
         <div className="op-role" style={{ padding: '0 12px' }}>{profile.company}</div>
         <button className="btn secondary op-signout" onClick={logout}>Sign out</button>
       </aside>

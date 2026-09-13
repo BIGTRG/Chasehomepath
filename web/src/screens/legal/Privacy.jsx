@@ -4,7 +4,7 @@ import LegalLayout from './LegalLayout.jsx';
 // docs/COMPLIANCE.md. Core promise from the product spec: your data is never sold.
 export default function Privacy() {
   return (
-    <LegalLayout title="Privacy Policy" updated="July 30, 2026">
+    <LegalLayout title="Privacy Policy" updated="September 13, 2026">
       <p className="legal-lede">
         The short version: we collect only what your homeownership plan needs, we protect it with
         encryption, <strong>we never sell your data</strong>, and we never share it with third
@@ -38,8 +38,13 @@ export default function Privacy() {
       <h2>3. What we share — and with whom</h2>
       <ul>
         <li><strong>Service providers</strong> that operate parts of the platform under contract:
-          credit monitoring (with your authorization), bank data connection, email delivery, and
-          hosting. Each receives only what its function requires.</li>
+          credit monitoring (with your authorization), bank data connection, email delivery,
+          payment processing, and hosting. Each receives only what its function requires. Your card
+          number goes directly from your device to the payment processor; we store only the card brand
+          and last four digits.</li>
+        <li><strong>Video sessions.</strong> Counseling and consultation video runs directly between
+          the participants' devices over an encrypted connection; our server only relays the
+          connection setup. We do not record sessions.</li>
         <li><strong>Your team.</strong> Staff assigned to your plan see your plan data. Independent
           partner professionals (lender, attorney, inspector, agent) see your information only when
           you choose to engage them, and only what that engagement needs.</li>

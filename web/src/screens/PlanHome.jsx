@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { plan as planApi } from '../api/client.js';
+import { plan as planApi, billing as billingApi } from '../api/client.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 import ScreenTop from '../components/ScreenTop.jsx';
 
@@ -30,6 +30,7 @@ export default function PlanHome() {
   const { user, logout } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [bill, setBill] = useState(undefined);
 
   async function load() {
     try {
@@ -42,6 +43,7 @@ export default function PlanHome() {
 
   useEffect(() => {
     load();
+    billingApi.me().then(setBill).catch(() => setBill(null));
   }, []);
 
   async function toggleMilestone(m) {
@@ -80,6 +82,29 @@ export default function PlanHome() {
           : `Day ${data.planDay} of ${totalDays}. Nothing gets placed before day ${placement.minDay} — that time is doing real work on your file.`}
       </div>
 
+      {/* Journey: choose a pace after the first consultation, then the AI plan review */}
+      {bill !== undefined && !bill?.subscription && (
+        <Link to="/plans" className="card item-card hl">
+          <div className="item-top"><span className="item-creditor">Choose your pace</span><span className="chev">›</span></div>
+          <div className="item-meta">Steady, Focused, or Express. Monthly, cancel anytime. Unlocks your full plan and AI plan review.</div>
+        </Link>
+      )}
+      {bill?.subscription && data.planDay <= 7 && (
+        <Link to="/plan-review" className="card item-card gl">
+          <div className="item-top"><span className="item-creditor">Walk through your plan</span><span className="chev">›</span></div>
+          <div className="item-meta">Your AI counselor goes screen by screen through your plan and each credit item.</div>
+        </Link>
+      )}
+      {bill?.sessions?.some((x) => x.status === 'booked') && (() => {
+        const next = bill.sessions.filter((x) => x.status === 'booked').sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0];
+        return (
+          <Link to={next.roomCode ? `/meet/${next.roomCode}` : '/billing'} className="card item-card">
+            <div className="item-top"><span className="item-creditor">Next session</span><span className="chev">›</span></div>
+            <div className="item-meta">{new Date(next.scheduledAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}{next.format === 'group' ? `, ${next.groupTitle}` : ', 1:1 counseling'}. Tap to open the room.</div>
+          </Link>
+        );
+      })()}
+
       {/* Track cards */}
       {data.tracks.map((t) => {
         const meta = TRACK_META[t.track_type] || { bar: '', label: t.track_type };
@@ -99,6 +124,11 @@ export default function PlanHome() {
       <Link to="/marketplace" className="card item-card">
         <div className="item-top"><span className="item-creditor">Explore the marketplace</span><span className="chev">›</span></div>
         <div className="item-meta">Homes, lots, and build plans — priced with your assistance.</div>
+      </Link>
+
+      <Link to="/counseling" className="card item-card">
+        <div className="item-top"><span className="item-creditor">Talk to a person</span><span className="chev">›</span></div>
+        <div className="item-meta">1:1 or group counseling on food spending, saving, budgeting, and more. Book any time.</div>
       </Link>
 
       <Link to="/agent" className="card item-card">
@@ -135,6 +165,7 @@ export default function PlanHome() {
         </>
       )}
 
+      <Link to="/billing" className="btn outline" style={{ marginTop: 8 }}>Billing and receipts</Link>
       <button className="btn secondary" onClick={logout} style={{ marginTop: 8 }}>
         Sign out
       </button>

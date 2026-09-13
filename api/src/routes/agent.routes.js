@@ -8,5 +8,6 @@ const router = Router();
 router.use(authenticate, authorize('member'));
 
 router.post('/ask', asyncHandler(agent.ask));
+router.get('/plan-review', asyncHandler(agent.planReview));
 
 export default router;
