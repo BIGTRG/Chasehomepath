@@ -49,7 +49,23 @@ export async function setLetterhead(member, { line1, line2, city, state, zip, da
     [member.id, JSON.stringify(address), dateOfBirth ?? null],
   );
   await audit({ actorUserId: actor.userId, actorRole: actor.role, action: 'dispute.letterhead_set', entityType: 'member', entityId: member.id, ...actor.reqMeta });
+  await refreshDraftLetters(member);
   return letterhead(member);
+}
+
+/** Unsigned round-1 bureau drafts are re-rendered so the new letterhead lands on them. */
+async function refreshDraftLetters(member) {
+  const head = await letterhead(member);
+  const { rows } = await query(
+    `SELECT l.id, l.recipient_key, d.reason_code, d.details, ci.creditor, ci.type, ci.balance
+       FROM dispute_letters l JOIN disputes d ON d.id = l.dispute_id JOIN credit_items ci ON ci.id = d.credit_item_id
+      WHERE l.member_id = $1 AND l.status = 'draft' AND l.kind = 'bureau_dispute' AND l.deleted_at IS NULL AND d.status = 'draft'`,
+    [member.id],
+  );
+  for (const r of rows) {
+    const l = bureauDispute({ member: head, item: r, reasonCode: r.reason_code, details: r.details, bureauKey: r.recipient_key });
+    await query(`UPDATE dispute_letters SET body = $2 WHERE id = $1`, [r.id, l.body]);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +128,7 @@ async function insertLetter(db, disputeId, memberId, round, l) {
 // ---------------------------------------------------------------------------
 export async function getDispute(member, disputeId, db = query) {
   const { rows } = await db(
-    `SELECT d.*, ci.creditor, ci.type, ci.balance
+    `SELECT d.*, d.due_at::text AS due_at, ci.creditor, ci.type, ci.balance
        FROM disputes d JOIN credit_items ci ON ci.id = d.credit_item_id
       WHERE d.id = $1 AND d.member_id = $2 AND d.deleted_at IS NULL`,
     [disputeId, member.id],
@@ -120,7 +136,7 @@ export async function getDispute(member, disputeId, db = query) {
   const d = rows[0];
   if (!d) throw new NotFoundError('Dispute not found');
   const { rows: letters } = await db(
-    `SELECT id, round, kind, recipient_key, recipient_name, recipient_addr, body, status, signed_name, approved_at, sent_at, sent_method, tracking, created_at
+    `SELECT id, round, kind, recipient_key, recipient_name, recipient_addr, body, status, signed_name, approved_at, sent_at::text AS sent_at, sent_method, tracking, created_at
        FROM dispute_letters WHERE dispute_id = $1 AND deleted_at IS NULL ORDER BY round, created_at`,
     [disputeId],
   );
@@ -129,7 +145,7 @@ export async function getDispute(member, disputeId, db = query) {
   return {
     dispute: {
       id: d.id, status: d.status, round: d.round, reasonCode: d.reason_code, reasonLabel: REASONS[d.reason_code]?.label ?? d.reason_code,
-      details: d.details, bureaus: d.bureaus, filedAt: d.filed_at, dueAt: d.due_at, dayCount: d.day_count,
+      details: d.details, bureaus: d.bureaus, filedAt: d.filed_at, dueAt: d.due_at, dayCount: liveDays(d),
       outcome: d.outcome, outcomeAt: d.outcome_at, outcomeNote: d.outcome_note,
       item: { id: d.credit_item_id, creditor: d.creditor, type: d.type, balance: d.balance },
     },
@@ -141,6 +157,8 @@ export async function getDispute(member, disputeId, db = query) {
     counselor: { name: COUNSELOR.name, disclosure: COUNSELOR.disclosure },
   };
 }
+
+const liveDays = (d) => (['filed', 'investigating', 'resolved'].includes(d.status) && d.filed_at ? Math.max(0, Math.floor((Date.now() - new Date(d.filed_at).getTime()) / 86400000)) : 0);
 
 /** Maren's guidance, computed from the state. One action at a time. */
 export function nextStep(d, letters, head) {
@@ -157,7 +175,7 @@ export function nextStep(d, letters, head) {
   const approved = cur.filter((l) => l.status === 'approved');
   if (approved.length) return { code: 'send', title: `Print and send ${approved.length === 1 ? 'your letter' : `${approved.length} letters`}`, text: 'Certified mail with return receipt is best; the receipt is your proof of the date. Or copy the text into the bureau portal. Mark each one sent when it is on its way.', letterId: approved[0].id };
   if (d.status === 'filed' || d.status === 'investigating') {
-    const due = d.due_at ? new Date(`${String(d.due_at).slice(0, 10)}T12:00:00`) : null;
+    const due = d.due_at ? (d.due_at instanceof Date ? new Date(d.due_at.getTime() + 12 * 3600 * 1000) : new Date(`${String(d.due_at).slice(0, 10)}T12:00:00`)) : null;
     const overdue = due && due < new Date();
     if (!d.outcome && !overdue) return { code: 'wait', title: 'Waiting on their answer', text: `They have ${RESPONSE_DAYS} days from receipt. Expect a letter or an email by ${due ? due.toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'the due date'}. When it arrives, record what they said here.` };
     if (!d.outcome && overdue) return { code: 'overdue', title: 'Their time is up', text: 'No answer inside the window. Record "no response" and Maren drafts a complaint to the CFPB, which the bureau must answer.' };
@@ -269,7 +287,7 @@ export async function nextRound(member, disputeId, { kind, bureaus, recipientAdd
     if (kind === 'cfpb_complaint' && !['verified', 'no_response'].includes(d.outcome ?? '')) throw new ConflictError('File with the CFPB after they answer "verified" or miss the deadline', 'cfpb_needs_outcome');
     if (d.round >= 6) throw new ConflictError('This dispute has reached its last round', 'max_rounds');
 
-    const { rows: prior } = await db(`SELECT recipient_key, sent_at, recipient_name, kind FROM dispute_letters WHERE dispute_id = $1 AND status = 'sent' AND deleted_at IS NULL ORDER BY sent_at`, [disputeId]);
+    const { rows: prior } = await db(`SELECT recipient_key, sent_at::text AS sent_at, recipient_name, kind FROM dispute_letters WHERE dispute_id = $1 AND status = 'sent' AND deleted_at IS NULL ORDER BY sent_at`, [disputeId]);
     const { rows: events } = await db(`SELECT text, created_at FROM dispute_events WHERE dispute_id = $1 AND kind IN ('letter_sent','response') ORDER BY created_at`, [disputeId]);
     const head = await letterhead(member, db);
     const item = { creditor: d.creditor, type: d.type, balance: d.balance };
@@ -308,7 +326,7 @@ export async function getCaseByLetter(member, letterId) {
 /** Tracker list with next step for each open case. */
 export async function listCases(member) {
   const { rows } = await query(
-    `SELECT d.*, ci.creditor, ci.type FROM disputes d JOIN credit_items ci ON ci.id = d.credit_item_id
+    `SELECT d.*, d.due_at::text AS due_at, ci.creditor, ci.type FROM disputes d JOIN credit_items ci ON ci.id = d.credit_item_id
       WHERE d.member_id = $1 AND d.deleted_at IS NULL ORDER BY (d.status IN ('draft','filed','investigating')) DESC, d.filed_at DESC`,
     [member.id],
   );
@@ -318,7 +336,7 @@ export async function listCases(member) {
   const head = await letterhead(member);
   return rows.map((d) => ({
     id: d.id, status: d.status, round: d.round, creditor: d.creditor, type: d.type, reasonLabel: REASONS[d.reason_code]?.label ?? d.reason_code ?? 'Dispute',
-    filedAt: d.filed_at, dueAt: d.due_at, dayCount: d.day_count, outcome: d.outcome, bureaus: d.bureaus,
+    filedAt: d.filed_at, dueAt: d.due_at, dayCount: liveDays(d), outcome: d.outcome, bureaus: d.bureaus,
     next: nextStep(d, letters.filter((l) => l.dispute_id === d.id), head),
   }));
 }

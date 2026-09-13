@@ -566,8 +566,9 @@ body {
 .input:focus, .field textarea:focus, textarea.letter:focus { outline: 2px solid var(--orange); outline-offset: 0; border-color: var(--orange); }
 textarea.letter { min-height: 420px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; resize: vertical; }
 .letter-paper { white-space: pre-wrap; font-size: 14px; line-height: 1.55; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-.steps { padding-left: 20px; margin: 6px 0 0; }
-.steps li { font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+.steps { display: block; padding-left: 20px; margin: 6px 0 0; list-style: decimal; }
+ul.steps { list-style: disc; }
+.steps li { display: list-item; font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
 .timeline .row { align-items: flex-start; }
 .timeline .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); margin-top: 6px; flex: none; }
 .timeline .dot.g { background: var(--green); }

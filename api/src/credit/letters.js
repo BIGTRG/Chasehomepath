@@ -92,8 +92,9 @@ export const REASONS = {
   },
 };
 
-const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
-const fmtDob = (d) => (d ? new Date(`${String(d).slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }) : '[date of birth]');
+const asDay = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+const fmtDate = (d) => (d instanceof Date && d.getUTCHours() !== 0 ? d : new Date(`${asDay(d)}T12:00:00`)).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+const fmtDob = (d) => (d ? new Date(`${asDay(d)}T12:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }) : '[date of birth]');
 
 function addressBlock(a) {
   if (!a || !a.line1) return '[your street address]\n[city, state ZIP]';

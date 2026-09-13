@@ -62,8 +62,8 @@ test('api: start -> letterhead -> sign -> sent -> verified -> MOV + furnisher ro
   await call('POST', '/api/intake', { householdIncome: 58000, targetArea: 'Raleigh, NC', authorizeCreditPull: true }, tok);
   assert.equal((await call('POST', '/api/credit/pull', undefined, tok)).status, 201);
   const ov = await (await call('GET', '/api/credit', undefined, tok)).json();
-  const target = ov.items.find((i) => i.classification === 'disputable');
-  const accurate = ov.items.find((i) => i.classification === 'accurate');
+  const target = ov.disputable[0];
+  const accurate = ov.accurate[0];
 
   const opts = await (await call('GET', '/api/credit/dispute-options', undefined, tok)).json();
   assert.ok(opts.reasons.length >= 8 && opts.bureaus.length === 3);
@@ -85,19 +85,21 @@ test('api: start -> letterhead -> sign -> sent -> verified -> MOV + furnisher ro
   assert.equal((await call('PUT', '/api/credit/letterhead', { line1: '12 Oak St', city: 'Durham', state: 'nc', zip: '27701', dateOfBirth: '1988-02-14' }, tok)).status, 200);
   c = await (await call('GET', `/api/credit/cases/${c.dispute.id}`, undefined, tok)).json();
   assert.equal(c.next.code, 'review');
+  assert.match(c.letters[0].body, /12 Oak St/, 'drafts pick up the letterhead');
+  assert.match(c.letters[0].body, /02\/14\/1988/);
 
   // Edit, sign, and the letter can't be marked sent before it's signed.
-  const edited = await call('PUT', `/api/credit/letters/${l1.id}`, { body: l1.body.replace('I have never had an account here.', 'I have never had an account with this company.') }, tok);
+  const edited = await call('PUT', `/api/credit/letters/${l1.id}`, { body: c.letters[0].body.replace('I have never had an account here.', 'I have never had an account with this company.') }, tok);
   assert.equal(edited.status, 200);
   assert.equal((await call('POST', `/api/credit/letters/${l1.id}/sent`, { method: 'certified_mail' }, tok)).status, 409);
   c = await (await call('POST', `/api/credit/letters/${l1.id}/sign`, { signedName: 'Dee Dispute' }, tok)).json();
   assert.equal(c.letters[0].status, 'approved'); assert.equal(c.next.code, 'review', 'second letter still a draft');
   await call('POST', `/api/credit/letters/${l2.id}/sign`, { signedName: 'Dee Dispute' }, tok);
-  c = await (await call('POST', `/api/credit/letters/${l1.id}/sent`, { method: 'certified_mail', tracking: '9407 1111 2222', sentOn: '2026-09-01' }, tok)).json();
+  c = await (await call('POST', `/api/credit/letters/${l1.id}/sent`, { method: 'certified_mail', tracking: '9407 1111 2222', sentOn: '2026-07-01' }, tok)).json();
   assert.equal(c.dispute.status, 'filed');
-  assert.equal(c.dispute.dueAt.slice(0, 10), '2026-10-06', '30 days + 5 mail days');
-  c = await (await call('POST', `/api/credit/letters/${l2.id}/sent`, { method: 'online', sentOn: '2026-09-02' }, tok)).json();
-  assert.equal(c.dispute.dueAt.slice(0, 10), '2026-10-06', 'later send never shortens the clock');
+  assert.equal(c.dispute.dueAt.slice(0, 10), '2026-08-05', '30 days + 5 mail days');
+  c = await (await call('POST', `/api/credit/letters/${l2.id}/sent`, { method: 'online', sentOn: '2026-07-02' }, tok)).json();
+  assert.equal(c.dispute.dueAt.slice(0, 10), '2026-08-05', 'a later online send (shorter wait) never shortens the clock');
   assert.equal((await call('PUT', `/api/credit/letters/${l1.id}`, { body: 'x'.repeat(100) }, tok)).status, 409, 'sent letters are frozen');
   assert.equal(c.next.code, 'overdue', 'clock ran out in test time');
 
