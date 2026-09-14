@@ -84,6 +84,8 @@ export async function api(path, opts = {}) {
 export const auth = {
   register: (body) => api('/auth/register', { method: 'POST', body, auth: false }),
   login: (body) => api('/auth/login', { method: 'POST', body, auth: false }),
+  demoStatus: () => api('/auth/demo', { auth: false }),
+  demoLogin: (persona) => api('/auth/demo', { method: 'POST', body: { persona }, auth: false }),
   me: () => api('/auth/me'),
   logout: () =>
     api('/auth/logout', { method: 'POST', body: { refreshToken: tokens.refresh }, auth: false }).catch(

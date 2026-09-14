@@ -61,6 +61,11 @@ export const env = {
     mfaIssuer: optional('MFA_ISSUER', 'CHASE HomePath'),
     // Staff MFA enforcement — on in production unless explicitly disabled.
     requireStaffMfa: optional('REQUIRE_STAFF_MFA', isProd ? 'true' : 'false') === 'true',
+    // One-tap demo sign-in (Deon, Sep 13 2026). Off unless DEMO_LOGIN_ENABLED=true.
+    // Must be turned OFF before real members are on the platform.
+    demoLoginEnabled: optional('DEMO_LOGIN_ENABLED', 'false') === 'true',
+    demoMemberEmail: optional('DEMO_MEMBER_EMAIL', 'demo.member@chasehomepath.com'),
+    demoOperatorEmail: optional('DEMO_OPERATOR_EMAIL', 'demo.admin@chasehomepath.com'),
   },
 
   encryption: {

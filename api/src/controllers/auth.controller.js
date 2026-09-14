@@ -143,6 +143,33 @@ export async function login(req, res) {
   res.json(session);
 }
 
+const demoSchema = z.object({ persona: z.enum(['member', 'operator']) });
+
+// One-tap demo sign-in for walkthroughs. Only the two configured demo accounts, only
+// while DEMO_LOGIN_ENABLED=true. Skips password and second factor for those two
+// accounts; the operator demo keeps mfa_enabled on the row so staff routes stay open.
+export async function demoStatus(_req, res) {
+  res.json({ enabled: env.auth.demoLoginEnabled });
+}
+
+export async function demoLogin(req, res) {
+  if (!env.auth.demoLoginEnabled) throw new AuthError('Demo sign-in is off', 'demo_disabled');
+  const { persona } = demoSchema.parse(req.body);
+  const email = persona === 'member' ? env.auth.demoMemberEmail : env.auth.demoOperatorEmail;
+  const user = await findByEmail(email);
+  if (!user || user.status !== 'active') throw new AuthError('Demo account is not available', 'demo_unavailable');
+
+  const session = await withTransaction(async (db) => {
+    await markLoggedIn(user.id, db);
+    await audit(
+      { actorUserId: user.id, actorRole: user.role, action: 'auth.demo_login', entityType: 'user', entityId: user.id, metadata: { persona }, ...meta(req) },
+      db,
+    );
+    return issueSession(user, req, db);
+  });
+  res.json(session);
+}
+
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
 export async function refresh(req, res) {

@@ -585,3 +585,9 @@ ul.steps { list-style: disc; }
   .print-letter, .print-letter * { visibility: visible; }
   .print-letter { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 0.75in; font: 12pt/1.5 Georgia, 'Times New Roman', serif; white-space: pre-wrap; color: #000; }
 }
+
+/* One-tap demo sign-in (only on /login?demo while DEMO_LOGIN_ENABLED) */
+.demo-box { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 18px; display: grid; gap: 10px; }
+.demo-box .btn { margin: 0; }
+.demo-title { margin: 0; font-weight: 700; font-size: 15px; color: var(--ink); }
+.demo-sub { margin: 0; font-size: 12.5px; color: var(--muted); text-align: center; }
