@@ -1,4 +1,5 @@
 import LegalLayout from './LegalLayout.jsx';
+import { LEGAL_ENTITY } from '../../brand.js';
 
 // Custom Privacy Policy for CHASE HomePath — GLBA-style notice, written against
 // docs/COMPLIANCE.md. Core promise from the product spec: your data is never sold.
@@ -94,7 +95,7 @@ export default function Privacy() {
       <h2>9. Changes and contact</h2>
       <p>
         Material changes to this policy will be announced in the app before they take effect.
-        Questions: TRG Tech Link — CHASE HomePath, support@chasehomepath.com.
+        Questions: {LEGAL_ENTITY} — CHASE HomePath, support@chasehomepath.com.
       </p>
     </LegalLayout>
   );

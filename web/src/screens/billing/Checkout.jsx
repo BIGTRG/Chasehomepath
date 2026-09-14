@@ -4,6 +4,7 @@ import { billing as billingApi, journey as journeyApi } from '../../api/client.j
 import ScreenTop from '../../components/ScreenTop.jsx';
 import PaymentField from '../../components/PaymentField.jsx';
 import { money } from './Plans.jsx';
+import { LEGAL_ENTITY } from '../../brand.js';
 
 // Checkout: one plan, one card, one explicit consent (FTC negative-option rule:
 // price, renewal, and cancel path stated before the button, stored server-side).
@@ -70,7 +71,7 @@ export default function Checkout() {
         <span>
           {plan.consentText}
           {methodLabel?.startsWith('Bank') && (
-            <> I authorize CHASE HomePath (TRG Tech Link) to electronically debit my bank account for {money(plan.priceCents)} on or about the same day each month, and for any session I book at the price shown when I book it. This authorization stays in effect until I cancel in the app or notify support@chasehomepath.com. A returned debit may be retried once.</>
+            <> I authorize CHASE HomePath ({LEGAL_ENTITY}) to electronically debit my bank account for {money(plan.priceCents)} on or about the same day each month, and for any session I book at the price shown when I book it. This authorization stays in effect until I cancel in the app or notify support@chasehomepath.com. A returned debit may be retried once.</>
           )}
         </span>
       </label>

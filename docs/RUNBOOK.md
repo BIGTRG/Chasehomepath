@@ -1,7 +1,7 @@
 # CHASE HomePath — Operations Runbook
 
 Production: https://chasehomepath.com — server #1 (178.105.21.227), stack at `/opt/chasehomepath`.
-Owner: TRG Tech Link (admin@trgtechlink.com).
+Owner: WF Chase V. Home Buying Enterprise LLC (admin@trgtechlink.com).
 
 ## Architecture (one box, Docker Compose)
 - Compose project: **`chasehomepath`** (pinned via `name:` in `deploy/docker-compose.prod.yml`).

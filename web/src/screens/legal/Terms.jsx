@@ -1,4 +1,5 @@
 import LegalLayout from './LegalLayout.jsx';
+import { LEGAL_ENTITY } from '../../brand.js';
 
 // Custom Terms for CHASE HomePath — written against docs/COMPLIANCE.md
 // (CROA, NC Credit Repair Services Act, FCRA, GLBA, RESPA, NCGS 93A).
@@ -8,7 +9,7 @@ export default function Terms() {
       <h2>1. Who we are</h2>
       <p>
         CHASE HomePath ("we", "us", "the Service") is a homeownership planning platform operated by
-        TRG Tech Link ("the Company"), available at chasehomepath.com. These Terms are a binding
+        {LEGAL_ENTITY} ("the Company"), available at chasehomepath.com. These Terms are a binding
         agreement between you and the Company. By creating an account you agree to them.
       </p>
 
@@ -150,7 +151,7 @@ export default function Terms() {
 
       <h2>12. Contact</h2>
       <p>
-        TRG Tech Link — CHASE HomePath, support@chasehomepath.com.
+        {LEGAL_ENTITY} — CHASE HomePath, support@chasehomepath.com.
       </p>
     </LegalLayout>
   );

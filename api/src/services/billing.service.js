@@ -6,6 +6,7 @@ import { sendMail } from '../lib/mailer.js';
 import { env } from '../config/env.js';
 import { weekdaySlots } from '../lib/businessTime.js';
 import { onSubscriptionPayment } from './paymentReporting.service.js';
+import { LEGAL_ENTITY } from '../lib/counselor.js';
 
 /**
  * Billing (approved 2026-09-12): monthly plan subscriptions (Steady/Focused/Express),
@@ -55,7 +56,7 @@ export function consentText({ planName, priceCents, methodType = 'card' }) {
     'outcome is promised.';
   if (methodType !== 'bank') return base;
   // NACHA-required ACH debit authorization language.
-  return `${base} I authorize CHASE HomePath (TRG Tech Link) to electronically debit my bank account ` +
+  return `${base} I authorize CHASE HomePath (${LEGAL_ENTITY}) to electronically debit my bank account ` +
     `for ${money(priceCents)} on or about the same day each month, and to debit any session I book at ` +
     'the price shown when I book it. This authorization stays in effect until I cancel in the app or ' +
     'notify support@chasehomepath.com, allowing reasonable time to act. If a debit is returned unpaid, ' +

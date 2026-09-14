@@ -2,7 +2,7 @@
 
 Prepared 2026-07-30. Research-based summary with statute cites; not legal advice. Have a NC-licensed
 attorney review before scaling paid credit services or the marketplace beyond CHASE-owned inventory.
-Operating entity assumed: TRG Tech Link (confirm exact legal entity + state of formation before
+Operating entity assumed: WF Chase V. Home Buying Enterprise LLC (confirm exact legal entity + state of formation before
 publishing legal pages externally). Initial corridor: North Carolina.
 
 ## 1. CROA — Credit Repair Organizations Act (15 U.S.C. §§ 1679–1679j)

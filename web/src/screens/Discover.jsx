@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { COUNSELOR } from '../brand.js';
+import { COUNSELOR, LEGAL_ENTITY } from '../brand.js';
 
 // Onboarding v2, step 1 (Deon, Sep 12): the video and the account form on one screen.
 // Terms sit inside the form and must be scrolled to the end before the button turns on.
@@ -10,7 +10,7 @@ const VIDEO_SRC = '/media/how-it-works.mp4';
 const VIDEO_POSTER = '/media/how-it-works-poster.jpg';
 
 const AGREEMENTS = [
-  ['What this is', 'CHASE HomePath is homeownership education and planning by TRG Tech Link. We teach, plan, and monitor with you. We are not a credit repair organization, a lender, or a law firm, and we do not promise any credit or loan outcome.'],
+  ['What this is', 'CHASE HomePath is homeownership education and planning by ' + LEGAL_ENTITY + '. We teach, plan, and monitor with you. We are not a credit repair organization, a lender, or a law firm, and we do not promise any credit or loan outcome.'],
   ['Your counselor', `${COUNSELOR.name} is a virtual counselor built by CHASE HomePath, not a person. She speaks only from your own file. Rate, loan-term, and legal questions are handed to a licensed person.`],
   ['Credit report authorization', 'You authorize CHASE HomePath and its credit-monitoring partner to obtain your consumer credit report so it can be used in your plan. This is a soft inquiry that does not lower your score.'],
   ['Your data', 'Your data is never sold. Documents you upload are encrypted at rest and shared only with the team you approve. You can export or delete your account from Billing at any time.'],

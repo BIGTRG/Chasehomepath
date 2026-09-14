@@ -9,3 +9,5 @@ export const COUNSELOR = Object.freeze({
   title: 'your HomePath counselor',
   disclosure: 'Maren is a virtual counselor built by CHASE HomePath, not a person. She speaks only from your file. Rate, loan-term, and legal questions go to your licensed team.',
 });
+
+export const LEGAL_ENTITY = 'WF Chase V. Home Buying Enterprise LLC';
